@@ -1,0 +1,24 @@
+[package]
+name = "pi_egl"
+version = "0.1.0"
+edition = "2021"
+authors = ["moyy <myy412001799@gmail.com>"]
+description = "Egl wrap for windows / android / webgl2"
+repository = "https://github.com/GaiaWorld/pi_egl"
+license = "MIT OR Apache-2.0"
+keywords = ["pi", "egl"]
+
+[dependencies]
+log = "0.4"
+glutin = "0.30"
+thiserror = "1.0"
+raw-window-handle = "0.5"
+
+[target.'cfg(target_arch = "wasm32")'.build-dependencies]
+webgl_generator = "0.2"
+
+[target.'cfg(not(target_arch = "wasm32"))'.build-dependencies]
+gl_generator = "0.14"
+
+[dev-dependencies]
+winit = "0.28"
