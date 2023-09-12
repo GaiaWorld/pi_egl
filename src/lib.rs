@@ -1,8 +1,13 @@
+#[macro_use]
+extern crate lazy_static;
+
 mod gl;
 mod instance;
 mod surface;
 mod context;
+pub mod macros;
 
+pub mod platform;
 pub use gl::*;
 pub use instance::*;
 pub use surface::*;
