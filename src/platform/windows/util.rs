@@ -20,9 +20,9 @@ use winapi::{
             PFD_TYPE_RGBA, PIXELFORMATDESCRIPTOR,
         },
         winuser::{
-            self, COLOR_BACKGROUND, CREATESTRUCTA, CS_OWNDC, WNDCLASSA, WS_OVERLAPPEDWINDOW,
-            WS_VISIBLE, WM_CREATE, CS_HREDRAW, CS_VREDRAW,
-        }, errhandlingapi::GetLastError,
+            self, COLOR_BACKGROUND, CREATESTRUCTA, CS_HREDRAW, CS_OWNDC, CS_VREDRAW, WM_CREATE,
+            WNDCLASSA, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
+        },
     },
 };
 
@@ -139,12 +139,10 @@ extern "system" fn extension_loader_window_proc(
 
                 // Create a false GL context.
                 let dc = winuser::GetDC(hwnd);
-                let r = GetLastError();
                 let pixel_format = wingdi::ChoosePixelFormat(dc, &pixel_format_descriptor);
-                let r = GetLastError();
                 assert_ne!(pixel_format, 0);
                 let mut ok = wingdi::SetPixelFormat(dc, pixel_format, &pixel_format_descriptor);
-                
+
                 assert_ne!(ok, FALSE);
                 let gl_context = wglCreateContext(dc);
                 assert!(!gl_context.is_null());

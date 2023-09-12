@@ -2,6 +2,7 @@
 use crate::platform::windows::context::WglContext as WglContextInner;
 
 pub struct Context {
+    
     #[cfg(not(target_arch = "wasm32"))]
     pub context: WglContextInner,
 }

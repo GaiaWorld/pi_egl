@@ -12,12 +12,12 @@ use winapi::{
     },
 };
 
-use crate::{types::GLenum, Gles2, InstanceError, PowerPreference, TRUE};
+use crate::{types::GLenum, InstanceError, PowerPreference, GL};
 
 use super::{
     context::WglContext,
     surface::WglSurface,
-    util::{set_exported_variables, WGL_EXTENSION_FUNCTIONS},
+    util::{get_proc_address, set_exported_variables, WGL_EXTENSION_FUNCTIONS},
 };
 
 const WGL_DRAW_TO_WINDOW_ARB: GLenum = 0x2001;
@@ -38,12 +38,14 @@ const WGL_CONTEXT_PROFILE_MASK_ARB: GLenum = 0x9126;
 const WGL_CONTEXT_CORE_PROFILE_BIT_ARB: GLenum = 0x00000001;
 // const WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: GLenum = 0x00000002;
 
-pub struct WglInstance;
+pub struct WglInstance(GL);
 
 impl WglInstance {
     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
         set_exported_variables(power);
-        Ok(WglInstance)
+
+        let gl = GL::load_with(|symbol_name| get_proc_address(symbol_name));
+        Ok(WglInstance(gl))
     }
 
     // 带双缓冲的 Surface
@@ -155,17 +157,18 @@ impl WglInstance {
 
     // 调用了这个之后，gl的函数 才能用；
     // wasm32 cfg 空实现
-    pub fn make_current(&self, surface: Option<&WglSurface>, context: Option<&WglContext>) {
+    pub fn make_current(&self, surface: Option<&WglSurface>, context: Option<&WglContext>) ->Option<&GL> {
         if let Some(surface) = surface {
             if let Some(context) = context {
                 let ok = unsafe { wglMakeCurrent(surface.0 as HDC, context.0 as HGLRC) };
                 assert_ne!(ok, FALSE);
+                return Some(&self.0);
             }
-        }else{
+        } else {
             let ok = unsafe { wglMakeCurrent(std::ptr::null_mut(), std::ptr::null_mut()) };
             assert_ne!(ok, FALSE);
         }
-        
+        None
     }
 
     // 交换 Surface 中的 双缓冲

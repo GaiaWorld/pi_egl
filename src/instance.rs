@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use super::{Context, PowerPreference, Surface};
 
+use crate::GL;
 #[cfg(target_os = "windows")]
 use crate::platform::windows::instance::WglInstance as InstanceInner;
 
@@ -29,6 +30,7 @@ impl Instance {
     // is_vsync: SwapBuffers 是否 重置同步
     pub fn new(power: PowerPreference, is_vsync: bool) -> Result<Self, InstanceError> {
         // Windows下: LowPower 集显, HighPerformance 独显
+    
         #[cfg(not(target_arch = "wasm32"))]
         {
             Ok(Self {
@@ -63,7 +65,7 @@ impl Instance {
 
     // 调用了这个之后，gl的函数 才能用；
     // wasm32 cfg 空实现
-    pub fn make_current(&self, surface: Option<&Surface>, context: Option<&Context>) {
+    pub fn make_current(&self, surface: Option<&Surface>, context: Option<&Context>) -> Option<&GL>{
         #[cfg(not(target_arch = "wasm32"))]
         {
             let mut s = None;
@@ -76,7 +78,7 @@ impl Instance {
                 c = Some(&t.context)
             }
 
-            self.instance.make_current(s, c);
+            self.instance.make_current(s, c)
         }
     }
 
