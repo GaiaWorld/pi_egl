@@ -1,14 +1,20 @@
 use std::{
     ffi::CString,
+    marker::PhantomData,
     mem,
     os::raw::{c_int, c_void},
-    ptr, thread,
+    ptr,
+    sync::mpsc::{self, Sender},
+    thread,
 };
 
 use log::warn;
+use std::thread::JoinHandle;
 use winapi::{
     shared::{
-        minwindef::{BOOL, FALSE, FLOAT, HMODULE, LPARAM, LPVOID, LRESULT, UINT, WORD, WPARAM},
+        minwindef::{
+            self, BOOL, FALSE, FLOAT, HMODULE, LPARAM, LPVOID, LRESULT, UINT, WORD, WPARAM,
+        },
         ntdef::LPCSTR,
         windef::{HBRUSH, HDC, HGLRC, HWND},
     },
@@ -20,14 +26,15 @@ use winapi::{
             PFD_TYPE_RGBA, PIXELFORMATDESCRIPTOR,
         },
         winuser::{
-            self, COLOR_BACKGROUND, CREATESTRUCTA, CS_HREDRAW, CS_OWNDC, CS_VREDRAW, WM_CREATE,
-            WNDCLASSA, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
+            self, COLOR_BACKGROUND, CREATESTRUCTA, CS_HREDRAW, CS_OWNDC, CS_VREDRAW, MSG, WM_CLOSE,
+            WM_CREATE, WNDCLASSA, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
         },
     },
 };
 
 use crate::PowerPreference;
 
+pub(crate) const HIDDEN_WINDOW_SIZE: c_int = 16;
 static NVIDIA_GPU_SELECT_SYMBOL: &[u8] = b"NvOptimusEnablement\0";
 static AMD_GPU_SELECT_SYMBOL: &[u8] = b"AmdPowerXpressRequestHighPerformance\0";
 
@@ -217,5 +224,188 @@ pub fn get_proc_address(symbol_name: &str) -> *const c_void {
         }
         let opengl_library = (*OPENGL_LIBRARY) as HMODULE;
         libloaderapi::GetProcAddress(opengl_library, symbol_ptr) as *const c_void
+    }
+}
+
+pub(crate) struct HiddenWindow {
+    window: HWND,
+    join_handle: Option<JoinHandle<()>>,
+}
+
+pub(crate) struct DCGuard<'a> {
+    pub(crate) dc: HDC,
+    window: Option<HWND>,
+    phantom: PhantomData<&'a HWND>,
+}
+
+struct SendableHWND(HWND);
+
+unsafe impl Send for SendableHWND {}
+
+impl Drop for HiddenWindow {
+    fn drop(&mut self) {
+        unsafe {
+            winuser::PostMessageA(self.window, WM_CLOSE, 0, 0);
+            if let Some(join_handle) = self.join_handle.take() {
+                drop(join_handle.join());
+            }
+        }
+    }
+}
+
+impl<'a> Drop for DCGuard<'a> {
+    #[inline]
+    fn drop(&mut self) {
+        unsafe {
+            if let Some(window) = self.window {
+                winuser::ReleaseDC(window, self.dc);
+            }
+        }
+    }
+}
+
+impl HiddenWindow {
+    pub(crate) fn new() -> HiddenWindow {
+        let (sender, receiver) = mpsc::channel();
+        let join_handle = thread::spawn(|| HiddenWindow::thread(sender));
+        let window = receiver.recv().unwrap().0;
+        HiddenWindow {
+            window,
+            join_handle: Some(join_handle),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn get_dc(&self) -> DCGuard {
+        unsafe { DCGuard::new(winuser::GetDC(self.window), Some(self.window)) }
+    }
+
+    // The thread that creates the window for off-screen contexts.
+    fn thread(sender: Sender<SendableHWND>) {
+        unsafe {
+            let instance = libloaderapi::GetModuleHandleA(ptr::null_mut());
+            let window_class_name = &b"SurfmanHiddenWindow\0"[0] as *const u8 as LPCSTR;
+            let mut window_class = mem::zeroed();
+            if winuser::GetClassInfoA(instance, window_class_name, &mut window_class) == FALSE {
+                window_class = WNDCLASSA {
+                    style: CS_OWNDC,
+                    lpfnWndProc: Some(winuser::DefWindowProcA),
+                    cbClsExtra: 0,
+                    cbWndExtra: 0,
+                    hInstance: instance,
+                    hIcon: ptr::null_mut(),
+                    hCursor: ptr::null_mut(),
+                    hbrBackground: COLOR_BACKGROUND as HBRUSH,
+                    lpszMenuName: ptr::null_mut(),
+                    lpszClassName: window_class_name,
+                };
+                let window_class_atom = winuser::RegisterClassA(&window_class);
+                assert_ne!(window_class_atom, 0);
+            }
+
+            let window = winuser::CreateWindowExA(
+                0,
+                window_class_name,
+                window_class_name,
+                WS_OVERLAPPEDWINDOW,
+                0,
+                0,
+                HIDDEN_WINDOW_SIZE,
+                HIDDEN_WINDOW_SIZE,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                instance,
+                ptr::null_mut(),
+            );
+
+            sender.send(SendableHWND(window)).unwrap();
+
+            let mut msg: MSG = mem::zeroed();
+            while winuser::GetMessageA(&mut msg, window, 0, 0) != FALSE {
+                println!("msg: {}", minwindef::LOWORD(msg.message));
+                winuser::TranslateMessage(&msg);
+                winuser::DispatchMessageA(&msg);
+                if minwindef::LOWORD(msg.message) as UINT == WM_CLOSE {
+                    break;
+                }
+            }
+        }
+    }
+
+    pub fn create() ->  HWND {
+        unsafe {
+            let instance = libloaderapi::GetModuleHandleA(ptr::null_mut());
+            let window_class_name = &b"SurfmanHiddenWindow\0"[0] as *const u8 as LPCSTR;
+            let mut window_class = mem::zeroed();
+            if winuser::GetClassInfoA(instance, window_class_name, &mut window_class) == FALSE {
+                window_class = WNDCLASSA {
+                    style: CS_OWNDC,
+                    lpfnWndProc: Some(winuser::DefWindowProcA),
+                    cbClsExtra: 0,
+                    cbWndExtra: 0,
+                    hInstance: instance,
+                    hIcon: ptr::null_mut(),
+                    hCursor: ptr::null_mut(),
+                    hbrBackground: COLOR_BACKGROUND as HBRUSH,
+                    lpszMenuName: ptr::null_mut(),
+                    lpszClassName: window_class_name,
+                };
+                let window_class_atom = winuser::RegisterClassA(&window_class);
+                assert_ne!(window_class_atom, 0);
+            }
+
+            let window = winuser::CreateWindowExA(
+                0,
+                window_class_name,
+                window_class_name,
+                WS_OVERLAPPEDWINDOW,
+                0,
+                0,
+                HIDDEN_WINDOW_SIZE,
+                HIDDEN_WINDOW_SIZE,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                instance,
+                ptr::null_mut(),
+            );
+
+            // sender.send(SendableHWND(window)).unwrap();
+
+            // let mut msg: MSG = mem::zeroed();
+            // while winuser::GetMessageA(&mut msg, window, 0, 0) != FALSE {
+            //     println!("msg: {}", minwindef::LOWORD(msg.message));
+            //     winuser::TranslateMessage(&msg);
+            //     winuser::DispatchMessageA(&msg);
+            //     if minwindef::LOWORD(msg.message) as UINT == WM_CLOSE {
+            //         break;
+            //     }
+            // }
+            window
+        }
+    }
+}
+
+impl<'a> DCGuard<'a> {
+    pub(crate) fn new(dc: HDC, window: Option<HWND>) -> DCGuard<'a> {
+        DCGuard {
+            dc,
+            window,
+            phantom: PhantomData,
+        }
+    }
+}
+
+pub(crate) fn set_dc_pixel_format(dc: HDC, pixel_format: c_int) {
+    unsafe {
+        let mut pixel_format_descriptor = mem::zeroed();
+        let pixel_format_count = wingdi::DescribePixelFormat(
+            dc,
+            pixel_format,
+            mem::size_of::<PIXELFORMATDESCRIPTOR>() as UINT,
+            &mut pixel_format_descriptor,
+        );
+        assert_ne!(pixel_format_count, 0);
+        let ok = wingdi::SetPixelFormat(dc, pixel_format, &mut pixel_format_descriptor);
+        assert_ne!(ok, FALSE);
     }
 }

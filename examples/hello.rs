@@ -18,7 +18,7 @@ fn main() {
         .unwrap();
 
     let mut instance = Instance::new(PowerPreference::HighPerformance, true).unwrap();
-    let context = instance.create_context(&window).unwrap();
+    let context = instance.create_context().unwrap();
     let surface = instance.create_surface(&window).unwrap();
 
     let gl = instance

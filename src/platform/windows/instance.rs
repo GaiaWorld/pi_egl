@@ -7,17 +7,18 @@ use winapi::{
         windef::{HDC, HGLRC, HWND},
     },
     um::{
+        errhandlingapi::GetLastError,
         wingdi::{self, wglMakeCurrent, SwapBuffers, PIXELFORMATDESCRIPTOR},
         winuser,
     },
 };
 
-use crate::{InstanceError, PowerPreference};
+use crate::{platform::windows::util::set_dc_pixel_format, InstanceError, PowerPreference};
 
 use super::{
     context::WglContext,
     surface::WglSurface,
-    util::{get_proc_address, set_exported_variables, WGL_EXTENSION_FUNCTIONS},
+    util::{get_proc_address, set_exported_variables, HiddenWindow, WGL_EXTENSION_FUNCTIONS},
 };
 
 type GLenum = u32;
@@ -36,16 +37,23 @@ const WGL_TYPE_RGBA_ARB: GLenum = 0x202b;
 const WGL_CONTEXT_MAJOR_VERSION_ARB: GLenum = 0x2091;
 const WGL_CONTEXT_MINOR_VERSION_ARB: GLenum = 0x2092;
 const WGL_CONTEXT_PROFILE_MASK_ARB: GLenum = 0x9126;
+const WGL_ALPHA_BITS_ARB: GLenum = 0x201b;
 
 const WGL_CONTEXT_CORE_PROFILE_BIT_ARB: GLenum = 0x00000001;
 // const WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: GLenum = 0x00000002;
 
-pub struct WglInstance(Option<glow::Context>);
+pub struct WglInstance(Option<glow::Context>, HWND);
+
+impl Drop for WglInstance {
+    fn drop(&mut self) {
+        let _ = unsafe { winuser::DestroyWindow(self.1) };
+    }
+}
 
 impl WglInstance {
     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
         set_exported_variables(power);
-        Ok(WglInstance(None))
+        Ok(WglInstance(None, HiddenWindow::create()))
     }
 
     // 带双缓冲的 Surface
@@ -59,17 +67,15 @@ impl WglInstance {
             return Err(InstanceError::IncompatibleWindowHandle);
         };
 
+        let context_dc =  unsafe { winuser::GetDC(self.1 as HWND) };
+        let pixel_format = unsafe { wingdi::GetPixelFormat(context_dc) };
+        set_dc_pixel_format(real_dc, pixel_format);
+
         Ok(WglSurface(real_dc as u64))
     }
 
     #[allow(non_snake_case)]
-    pub fn create_context<W: HasRawWindowHandle + HasRawDisplayHandle>(
-        &self,
-        window: &W,
-    ) -> Result<WglContext, InstanceError> {
-        // Now we can choose a pixel format the modern way, using wglChoosePixelFormatARB.
-
-        // const WGL_DRAW_TO_WINDOW_ARB: i32 = ;
+    pub fn create_context(&self) -> Result<WglContext, InstanceError> {
         let pixel_format_attribs = [
             WGL_DRAW_TO_WINDOW_ARB as c_int,
             1 as c_int,
@@ -87,9 +93,10 @@ impl WglInstance {
             24,
             WGL_STENCIL_BITS_ARB as c_int,
             8,
+            WGL_ALPHA_BITS_ARB as c_int,
+            8,
             0,
         ];
-
         // int pixel_format;
         // UINT num_formats;
 
@@ -98,14 +105,9 @@ impl WglInstance {
             Some(ref func) => func,
         };
 
-        let real_dc = if let RawWindowHandle::Win32(handle) = window.raw_window_handle() {
-            unsafe { winuser::GetDC(handle.hwnd as HWND) }
-        } else {
-            return Err(InstanceError::IncompatibleWindowHandle);
-        };
-
+        let real_dc = unsafe { winuser::GetDC(self.1) };
         let (mut pixel_format, mut pixel_format_count) = (0, 0);
-        let _ = unsafe {
+        let ok = unsafe {
             wglChoosePixelFormatARB(
                 real_dc,
                 pixel_format_attribs.as_ptr(),
@@ -115,7 +117,8 @@ impl WglInstance {
                 &mut pixel_format_count,
             )
         };
-        // PIXELFORMATDESCRIPTOR pfd;
+        assert_ne!(ok, FALSE);
+
         let mut pixel_format_descriptor = unsafe { std::mem::zeroed() };
         unsafe {
             wingdi::DescribePixelFormat(
@@ -127,6 +130,7 @@ impl WglInstance {
         };
         let ok =
             unsafe { wingdi::SetPixelFormat(real_dc, pixel_format, &mut pixel_format_descriptor) };
+        // println!()
         assert_ne!(ok, FALSE);
 
         // // Specify that we want to create an OpenGL 3.3 core profile context
@@ -148,6 +152,7 @@ impl WglInstance {
         let gl33_context = unsafe {
             wglCreateContextAttribsARB(real_dc, std::ptr::null_mut(), gl33_attribs.as_ptr())
         };
+        let err = unsafe { GetLastError() };
         if gl33_context.is_null() {
             return Err(InstanceError::ContextCreationFailed);
         }
@@ -165,6 +170,7 @@ impl WglInstance {
         if let Some(context) = context {
             if let Some(surface) = surface {
                 let ok = unsafe { wglMakeCurrent(surface.0 as HDC, context.0 as HGLRC) };
+                // set_dc_pixel_format(dc, pixel_format)
                 assert_ne!(ok, FALSE);
                 if self.0.is_none() {
                     let gl = unsafe {
@@ -174,7 +180,7 @@ impl WglInstance {
                     };
                     self.0.replace(gl);
                 }
-                
+
                 return Some(self.0.as_ref().unwrap());
             } else {
                 let ok = unsafe { wglMakeCurrent(std::ptr::null_mut(), context.0 as HGLRC) };

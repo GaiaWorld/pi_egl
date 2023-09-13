@@ -17,14 +17,6 @@ impl WebInstance {
         &self,
         window: &W,
     ) -> Result<WebSurface, InstanceError> {
-        Ok(WebSurface)
-    }
-
-    #[allow(non_snake_case)]
-    pub fn create_context<W: HasRawWindowHandle + HasRawDisplayHandle>(
-        &self,
-        window: &W,
-    ) -> Result<WebContext, InstanceError> {
         let canvas_attribute = if let RawWindowHandle::Web(handle) = window.raw_window_handle() {
             handle.id
         } else {
@@ -48,23 +40,26 @@ impl WebInstance {
             .dyn_into::<web_sys::WebGl2RenderingContext>()
             .unwrap();
 
-        return Ok(WebContext(webgl2_context));
+        Ok(WebSurface(glow::Context::from_webgl2_context(
+            webgl2_context
+        )))
+    }
+
+    #[allow(non_snake_case)]
+    pub fn create_context(&self) -> Result<WebContext, InstanceError> {
+        return Ok(WebContext);
     }
 
     // 调用了这个之后，gl的函数 才能用；
     // wasm32 cfg 空实现
-    pub fn make_current(
-        &mut self,
-        surface: Option<&WebSurface>,
+    pub fn make_current<'a>(
+        &'a mut self,
+        surface: Option<&'a WebSurface>,
         context: Option<&WebContext>,
     ) -> Option<&glow::Context> {
         if let Some(context) = context {
             if let Some(surface) = surface {
-                if self.0.is_none() {
-                    self.0
-                        .replace(glow::Context::from_webgl2_context(context.0.clone()));
-                }
-                return Some(self.0.as_ref().unwrap());
+                return Some(&surface.0);
             }
         }
         None

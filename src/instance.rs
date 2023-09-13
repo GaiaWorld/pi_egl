@@ -47,21 +47,18 @@ impl Instance {
     }
 
     // GLES 3.0 / WebGL2
-    pub fn create_context<W: HasRawWindowHandle + HasRawDisplayHandle>(
-        &self,
-        window: &W,
-    ) -> Result<Context, InstanceError> {
+    pub fn create_context(&self) -> Result<Context, InstanceError> {
         {
-            let context = self.instance.create_context(window)?;
+            let context = self.instance.create_context()?;
             Ok(Context { context })
         }
     }
 
     // 调用了这个之后，gl的函数 才能用；
     // wasm32 cfg 空实现
-    pub fn make_current(
-        &mut self,
-        surface: Option<&Surface>,
+    pub fn make_current<'a>(
+        &'a mut self,
+        surface: Option<&'a Surface>,
         context: Option<&Context>,
     ) -> Option<&glow::Context> {
         {

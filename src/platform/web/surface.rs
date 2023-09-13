@@ -1,4 +1,4 @@
-pub struct WebSurface;
+pub struct WebSurface(pub glow::Context);
 
 unsafe impl Sync for WebSurface {}
 unsafe impl Send for WebSurface {}
@@ -10,5 +10,4 @@ impl Drop for WebSurface {
             // todo!()
         }
     }
-    
 }
