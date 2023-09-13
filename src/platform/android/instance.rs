@@ -189,7 +189,7 @@ fn get_gl_address(symbol_name: &str) -> *const c_void {
         let symbol_name: CString = CString::new(symbol_name).unwrap();
         let v =
             egl.GetProcAddress(symbol_name.as_ptr() as *const u8 as *const c_char) as *const c_void;
-        println!("gl symbol_name {:?} ptr is {:?}!!", symbol_name, v);
+        // println!("gl symbol_name {:?} ptr is {:?}!!", symbol_name, v);
         v
     }
 }
