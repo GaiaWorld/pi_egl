@@ -1,5 +1,5 @@
 
-pub struct WebContext;
+pub struct WebContext(pub web_sys::WebGl2RenderingContext);
 
 unsafe impl Sync for WebContext {}
 unsafe impl Send for WebContext {}

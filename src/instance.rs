@@ -6,10 +6,11 @@ use super::{Context, PowerPreference, Surface};
 #[cfg(target_os = "windows")]
 use crate::platform::windows::instance::WglInstance as InstanceInner;
 
+#[cfg(target_arch = "wasm32")]
+use crate::platform::web::instance::WebInstance as InstanceInner;
+
 pub struct Instance {
-    #[cfg(not(target_arch = "wasm32"))]
-    instance: InstanceInner, // #[cfg(not(target_arch = "wasm32"))]
-                             // TODO
+    instance: InstanceInner,
 }
 
 unsafe impl Sync for Instance {}
@@ -27,8 +28,6 @@ impl Instance {
     // is_vsync: SwapBuffers 是否 重置同步
     pub fn new(power: PowerPreference, is_vsync: bool) -> Result<Self, InstanceError> {
         // Windows下: LowPower 集显, HighPerformance 独显
-
-        #[cfg(not(target_arch = "wasm32"))]
         {
             Ok(Self {
                 instance: InstanceInner::new(power, is_vsync)?,
@@ -41,7 +40,6 @@ impl Instance {
         &self,
         window: &W,
     ) -> Result<Surface, InstanceError> {
-        #[cfg(not(target_arch = "wasm32"))]
         {
             let surface = self.instance.create_surface(window)?;
             Ok(Surface { surface })
@@ -53,7 +51,6 @@ impl Instance {
         &self,
         window: &W,
     ) -> Result<Context, InstanceError> {
-        #[cfg(not(target_arch = "wasm32"))]
         {
             let context = self.instance.create_context(window)?;
             Ok(Context { context })
@@ -67,7 +64,6 @@ impl Instance {
         surface: Option<&Surface>,
         context: Option<&Context>,
     ) -> Option<&glow::Context> {
-        #[cfg(not(target_arch = "wasm32"))]
         {
             let mut s = None;
             if let Some(t) = surface {
@@ -86,7 +82,6 @@ impl Instance {
     // 交换 Surface 中的 双缓冲
     // wasm32 cfg 空实现
     pub fn swap_buffers(&self, surface: &Surface) {
-        #[cfg(not(target_arch = "wasm32"))]
         {
             self.instance.swap_buffers(&surface.surface)
         }

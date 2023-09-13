@@ -9,7 +9,7 @@ pub struct WebInstance(Option<glow::Context>);
 
 impl WebInstance {
     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
-        Ok(WebInstance)
+        Ok(WebInstance(None))
     }
 
     // 带双缓冲的 Surface
@@ -48,22 +48,22 @@ impl WebInstance {
             .dyn_into::<web_sys::WebGl2RenderingContext>()
             .unwrap();
 
-        if self.0.is_none() {
-            self.0
-                .replace(glow::Context::from_webgl2_context(webgl2_context));
-        }
-        return Ok(WebContext);
+        return Ok(WebContext(webgl2_context));
     }
 
     // 调用了这个之后，gl的函数 才能用；
     // wasm32 cfg 空实现
     pub fn make_current(
-        &self,
+        &mut self,
         surface: Option<&WebSurface>,
         context: Option<&WebContext>,
     ) -> Option<&glow::Context> {
         if let Some(context) = context {
             if let Some(surface) = surface {
+                if self.0.is_none() {
+                    self.0
+                        .replace(glow::Context::from_webgl2_context(context.0.clone()));
+                }
                 return Some(self.0.as_ref().unwrap());
             }
         }

@@ -1,9 +1,11 @@
 #[cfg(target_os = "windows")]
-use crate::platform::windows::surface::WglSurface as WglSurfaceInner;
+use crate::platform::windows::surface::WglSurface as SurfaceInner;
+
+#[cfg(target_arch = "wasm32")]
+use crate::platform::web::surface::WebSurface as SurfaceInner;
 
 pub struct Surface {
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) surface: WglSurfaceInner
+    pub(crate) surface: SurfaceInner
 }
 
 unsafe impl Sync for Surface {}
