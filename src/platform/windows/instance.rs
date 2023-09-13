@@ -12,13 +12,15 @@ use winapi::{
     },
 };
 
-use crate::{types::GLenum, InstanceError, PowerPreference, GL};
+use crate::{InstanceError, PowerPreference};
 
 use super::{
     context::WglContext,
     surface::WglSurface,
     util::{get_proc_address, set_exported_variables, WGL_EXTENSION_FUNCTIONS},
 };
+
+type GLenum = u32;
 
 const WGL_DRAW_TO_WINDOW_ARB: GLenum = 0x2001;
 const WGL_ACCELERATION_ARB: GLenum = 0x2003;
@@ -38,14 +40,12 @@ const WGL_CONTEXT_PROFILE_MASK_ARB: GLenum = 0x9126;
 const WGL_CONTEXT_CORE_PROFILE_BIT_ARB: GLenum = 0x00000001;
 // const WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: GLenum = 0x00000002;
 
-pub struct WglInstance(GL);
+pub struct WglInstance(Option<glow::Context>);
 
 impl WglInstance {
     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
         set_exported_variables(power);
-
-        let gl = GL::load_with(|symbol_name| get_proc_address(symbol_name));
-        Ok(WglInstance(gl))
+        Ok(WglInstance(None))
     }
 
     // 带双缓冲的 Surface
@@ -157,12 +157,28 @@ impl WglInstance {
 
     // 调用了这个之后，gl的函数 才能用；
     // wasm32 cfg 空实现
-    pub fn make_current(&self, surface: Option<&WglSurface>, context: Option<&WglContext>) ->Option<&GL> {
-        if let Some(surface) = surface {
-            if let Some(context) = context {
+    pub fn make_current(
+        &mut self,
+        surface: Option<&WglSurface>,
+        context: Option<&WglContext>,
+    ) -> Option<&glow::Context> {
+        if let Some(context) = context {
+            if let Some(surface) = surface {
                 let ok = unsafe { wglMakeCurrent(surface.0 as HDC, context.0 as HGLRC) };
                 assert_ne!(ok, FALSE);
-                return Some(&self.0);
+                if self.0.is_none() {
+                    let gl = unsafe {
+                        glow::Context::from_loader_function(|symbol_name| {
+                            get_proc_address(symbol_name)
+                        })
+                    };
+                    self.0.replace(gl);
+                }
+                
+                return Some(self.0.as_ref().unwrap());
+            } else {
+                let ok = unsafe { wglMakeCurrent(std::ptr::null_mut(), context.0 as HGLRC) };
+                assert_ne!(ok, FALSE);
             }
         } else {
             let ok = unsafe { wglMakeCurrent(std::ptr::null_mut(), std::ptr::null_mut()) };

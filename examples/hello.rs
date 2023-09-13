@@ -1,7 +1,5 @@
-use pi_egl::{
-    init_env, platform::windows::util::get_proc_address, Instance, PowerPreference,
-    COLOR_BUFFER_BIT, GL,
-};
+use glow::{HasContext, COLOR_BUFFER_BIT};
+use pi_egl::{init_env, Instance, PowerPreference};
 
 use winit::{
     dpi::PhysicalSize,
@@ -19,14 +17,14 @@ fn main() {
         .build(&event_loop)
         .unwrap();
 
-    let instance = Instance::new(PowerPreference::HighPerformance, true).unwrap();
+    let mut instance = Instance::new(PowerPreference::HighPerformance, true).unwrap();
     let context = instance.create_context(&window).unwrap();
     let surface = instance.create_surface(&window).unwrap();
 
     let gl = instance
         .make_current(Some(&surface), Some(&context))
         .unwrap();
-    let gl = unsafe { std::mem::transmute::<&'_ GL, &'static GL>(gl) };
+    let gl = unsafe { std::mem::transmute::<&'_  glow::Context, &'static glow::Context>(gl) };
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -34,8 +32,8 @@ fn main() {
         match event {
             winit::event::Event::MainEventsCleared => unsafe {
                 // gl.Viewport(0, 0, 1024, 768);
-                gl.ClearColor(1.0, 0.0, 0.0, 1.0);
-                gl.Clear(COLOR_BUFFER_BIT);
+                gl.clear_color(1.0, 0.0, 0.0, 1.0);
+                gl.clear(COLOR_BUFFER_BIT);
             },
             winit::event::Event::WindowEvent { event, .. } => match event {
                 winit::event::WindowEvent::CloseRequested => {
@@ -45,7 +43,7 @@ fn main() {
             },
 
             Event::RedrawRequested(_) => {
-                unsafe { println!("error: {}", gl.GetError()) };
+                unsafe { println!("error: {}", gl.get_error()) };
                 instance.swap_buffers(&surface)
             }
             _ => {}
