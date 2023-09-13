@@ -41,4 +41,12 @@ winapi = { version = "0.3", features = ["wingdi", "winuser", "libloaderapi", "er
 gl_generator = "0.14"
 
 [dev-dependencies]
-winit = "0.28"
+winit = {registry = "yn", version = "0.27"}
+
+[target.'cfg(target_os = "android")'.dev-dependencies]
+# Coordinate the next winit release with android-ndk-rs: https://github.com/rust-windowing/winit/issues/1995
+ndk-glue = "0.7.0"
+
+[[example]]
+name = "hello_android"
+crate-type = ["cdylib"]

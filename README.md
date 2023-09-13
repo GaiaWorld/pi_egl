@@ -18,3 +18,5 @@
 | `wgl` / `egl` 封装 | [glutin](https://github.com/rust-windowing/glutin)                               |
 | GL-函数生成        | [gl-rs](https://github.com/brendanzab/gl-rs) `gl_generator` /  `webgl_generator` |
 | 窗口句柄 Trait     | [raw-window-handle](https://github.com/rust-windowing/raw-window-handle)         |
+
+* android 实例 执行 cargo apk run --example hello_android

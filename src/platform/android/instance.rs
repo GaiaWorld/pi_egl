@@ -1,13 +1,10 @@
-use std::os::raw::c_int;
-
+use std::os::raw::{c_int, c_void, c_char};
+use std::ffi::CString;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::{
+    platform::android::egl::{self, EGLint},
     platform::android::{egl::types::EGLDisplay, util::egl_config_from_display},
-    platform::android::{
-        egl::{self, EGLint},
-        util::get_proc_address,
-    },
     InstanceError, PowerPreference,
 };
 
@@ -143,7 +140,7 @@ impl EglInstance {
                 if self.1.is_none() {
                     let context = unsafe {
                         glow::Context::from_loader_function(|symbol_name| {
-                            get_proc_address(symbol_name)
+                            get_gl_address(symbol_name)
                         })
                     };
                     let _ = self.1.replace(context);
@@ -183,5 +180,16 @@ impl EglInstance {
         let egl_display = self.0;
 
         unsafe { egl.SwapBuffers(egl_display, surface.egl_surface) };
+    }
+}
+
+fn get_gl_address(symbol_name: &str) -> *const c_void {
+    unsafe {
+        let egl = &EGL_FUNCTIONS.0;
+        let symbol_name: CString = CString::new(symbol_name).unwrap();
+        let v =
+            egl.GetProcAddress(symbol_name.as_ptr() as *const u8 as *const c_char) as *const c_void;
+        println!("gl symbol_name {:?} ptr is {:?}!!", symbol_name, v);
+        v
     }
 }
