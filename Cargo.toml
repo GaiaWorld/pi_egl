@@ -37,7 +37,7 @@ web-sys = { version = "0.3.61", features = [
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["wingdi", "winuser", "libloaderapi", "errhandlingapi"] }
 
-[target.'cfg(target_os = "android")'.build-dependencies]
+[build-dependencies]
 gl_generator = "0.14"
 
 [dev-dependencies]

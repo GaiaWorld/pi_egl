@@ -9,6 +9,9 @@ use crate::platform::windows::instance::WglInstance as InstanceInner;
 #[cfg(target_arch = "wasm32")]
 use crate::platform::web::instance::WebInstance as InstanceInner;
 
+#[cfg(target_os = "android")]
+use crate::platform::android::instance::EglInstance as InstanceInner;
+
 pub struct Instance {
     instance: InstanceInner,
 }

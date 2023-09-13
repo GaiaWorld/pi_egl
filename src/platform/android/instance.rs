@@ -1,176 +1,187 @@
-// use std::os::raw::c_int;
+use std::os::raw::c_int;
 
-// use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
-// use winapi::{
-//     shared::{
-//         minwindef::{FALSE, UINT},
-//         windef::{HDC, HGLRC, HWND},
-//     },
-//     um::{
-//         wingdi::{self, wglMakeCurrent, SwapBuffers, PIXELFORMATDESCRIPTOR},
-//         winuser,
-//     },
-// };
+use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
 
-// use crate::{types::GLenum, Gles2, InstanceError, PowerPreference, TRUE};
+use crate::{
+    platform::android::{egl::types::EGLDisplay, util::egl_config_from_display},
+    platform::android::{
+        egl::{self, EGLint},
+        util::get_proc_address,
+    },
+    InstanceError, PowerPreference,
+};
 
-// use super::{
-//     context::WglContext,
-//     surface::WglSurface,
-//     util::{set_exported_variables, WGL_EXTENSION_FUNCTIONS},
-// };
+use super::{context::EglContext, surface::EglSurface, util::EGL_FUNCTIONS};
 
-// const WGL_DRAW_TO_WINDOW_ARB: GLenum = 0x2001;
-// const WGL_ACCELERATION_ARB: GLenum = 0x2003;
-// const WGL_SUPPORT_OPENGL_ARB: GLenum = 0x2010;
-// const WGL_DOUBLE_BUFFER_ARB: GLenum = 0x2011;
-// const WGL_PIXEL_TYPE_ARB: GLenum = 0x2013;
-// const WGL_COLOR_BITS_ARB: GLenum = 0x2014;
-// // const WGL_ALPHA_BITS_ARB: GLenum = 0x201b;
-// const WGL_DEPTH_BITS_ARB: GLenum = 0x2022;
-// const WGL_STENCIL_BITS_ARB: GLenum = 0x2023;
-// const WGL_FULL_ACCELERATION_ARB: GLenum = 0x2027;
-// const WGL_TYPE_RGBA_ARB: GLenum = 0x202b;
-// const WGL_CONTEXT_MAJOR_VERSION_ARB: GLenum = 0x2091;
-// const WGL_CONTEXT_MINOR_VERSION_ARB: GLenum = 0x2092;
-// const WGL_CONTEXT_PROFILE_MASK_ARB: GLenum = 0x9126;
+pub struct EglInstance(EGLDisplay, Option<glow::Context>);
 
-// const WGL_CONTEXT_CORE_PROFILE_BIT_ARB: GLenum = 0x00000001;
-// // const WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: GLenum = 0x00000002;
+impl Drop for EglInstance {
+    fn drop(&mut self) {
+        let egl = &EGL_FUNCTIONS.0;
+        unsafe {
+            let result = egl.Terminate(self.0);
+            assert_ne!(result, egl::FALSE);
+            self.0 = egl::NO_DISPLAY;
+        }
+    }
+}
 
-// pub struct WglInstance;
+impl EglInstance {
+    pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
+        let egl = &EGL_FUNCTIONS.0;
 
-// impl WglInstance {
-//     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
-//         set_exported_variables(power);
-//         Ok(WglInstance)
-//     }
+        unsafe {
+            let egl_display = egl.GetDisplay(egl::DEFAULT_DISPLAY);
+            assert_ne!(egl_display, egl::NO_DISPLAY);
 
-//     // 带双缓冲的 Surface
-//     pub fn create_surface<W: HasRawWindowHandle + HasRawDisplayHandle>(
-//         &self,
-//         window: &W,
-//     ) -> Result<WglSurface, InstanceError> {
-//         let real_dc = if let RawWindowHandle::Win32(handle) = window.raw_window_handle() {
-//             unsafe { winuser::GetDC(handle.hwnd as HWND) }
-//         } else {
-//             return Err(InstanceError::IncompatibleWindowHandle);
-//         };
+            // I don't think this should ever fail.
+            let (mut major_version, mut minor_version) = (0, 0);
+            let result = egl.Initialize(egl_display, &mut major_version, &mut minor_version);
+            assert_ne!(result, egl::FALSE);
 
-//         Ok(WglSurface(real_dc as u64))
-//     }
+            Ok(EglInstance(egl_display, None))
+        }
+    }
 
-//     #[allow(non_snake_case)]
-//     pub fn create_context<W: HasRawWindowHandle + HasRawDisplayHandle>(
-//         &self,
-//         window: &W,
-//     ) -> Result<WglContext, InstanceError> {
-//         // Now we can choose a pixel format the modern way, using wglChoosePixelFormatARB.
+    // 带双缓冲的 Surface
+    pub fn create_surface<W: HasRawWindowHandle + HasRawDisplayHandle>(
+        &self,
+        window: &W,
+    ) -> Result<EglSurface, InstanceError> {
+        let egl = &EGL_FUNCTIONS.0;
+        let egl_display = self.0;
+        let native_window = if let RawWindowHandle::AndroidNdk(handle) = window.raw_window_handle()
+        {
+            handle.a_native_window
+        } else {
+            return Err(InstanceError::IncompatibleWindowHandle);
+        };
+        unsafe {
+            let egl_config = egl_config_from_display(egl_display);
 
-//         // const WGL_DRAW_TO_WINDOW_ARB: i32 = ;
-//         let pixel_format_attribs = [
-//             WGL_DRAW_TO_WINDOW_ARB as c_int,
-//             1 as c_int,
-//             WGL_SUPPORT_OPENGL_ARB as c_int,
-//             1 as c_int,
-//             WGL_DOUBLE_BUFFER_ARB as c_int,
-//             1 as c_int,
-//             WGL_ACCELERATION_ARB as c_int,
-//             WGL_FULL_ACCELERATION_ARB as c_int,
-//             WGL_PIXEL_TYPE_ARB as c_int,
-//             WGL_TYPE_RGBA_ARB as c_int,
-//             WGL_COLOR_BITS_ARB as c_int,
-//             32,
-//             WGL_DEPTH_BITS_ARB as c_int,
-//             24,
-//             WGL_STENCIL_BITS_ARB as c_int,
-//             8,
-//             0,
-//         ];
+            let attributes = [egl::NONE as EGLint];
+            let egl_surface = egl.CreateWindowSurface(
+                egl_display,
+                egl_config,
+                native_window,
+                attributes.as_ptr(),
+            );
 
-//         // int pixel_format;
-//         // UINT num_formats;
+            assert_ne!(egl_surface, egl::NO_SURFACE);
 
-//         let wglChoosePixelFormatARB = match WGL_EXTENSION_FUNCTIONS.wglChoosePixelFormatARB {
-//             None => return Err(InstanceError::RequiredExtensionUnavailable),
-//             Some(ref func) => func,
-//         };
+            let mut width = 0;
+            let mut height = 0;
+            egl.QuerySurface(egl_display, egl_surface, egl::WIDTH as EGLint, &mut width);
+            egl.QuerySurface(egl_display, egl_surface, egl::HEIGHT as EGLint, &mut height);
+            assert_ne!(width, 0);
+            assert_ne!(height, 0);
 
-//         let real_dc = if let RawWindowHandle::Win32(handle) = window.raw_window_handle() {
-//             unsafe { winuser::GetDC(handle.hwnd as HWND) }
-//         } else {
-//             return Err(InstanceError::IncompatibleWindowHandle);
-//         };
+            Ok(EglSurface {
+                width,
+                height,
+                egl_surface,
+                egl_display,
+            })
+        }
+    }
 
-//         let (mut pixel_format, mut pixel_format_count) = (0, 0);
-//         let _ = unsafe {
-//             wglChoosePixelFormatARB(
-//                 real_dc,
-//                 pixel_format_attribs.as_ptr(),
-//                 std::ptr::null(),
-//                 1,
-//                 &mut pixel_format,
-//                 &mut pixel_format_count,
-//             )
-//         };
-//         // PIXELFORMATDESCRIPTOR pfd;
-//         let mut pixel_format_descriptor = unsafe { std::mem::zeroed() };
-//         unsafe {
-//             wingdi::DescribePixelFormat(
-//                 real_dc,
-//                 pixel_format,
-//                 std::mem::size_of::<PIXELFORMATDESCRIPTOR>() as UINT,
-//                 &mut pixel_format_descriptor,
-//             )
-//         };
-//         let ok =
-//             unsafe { wingdi::SetPixelFormat(real_dc, pixel_format, &mut pixel_format_descriptor) };
-//         assert_ne!(ok, FALSE);
+    #[allow(non_snake_case)]
+    pub fn create_context(&self) -> Result<EglContext, InstanceError> {
+        let egl = &EGL_FUNCTIONS.0;
+        let egl_display = self.0;
+        // Now we can choose a pixel format the modern way, using wglChoosePixelFormatARB.
+        unsafe {
+            egl.BindAPI(egl::OPENGL_ES_API);
 
-//         // // Specify that we want to create an OpenGL 3.3 core profile context
-//         let gl33_attribs = [
-//             WGL_CONTEXT_MAJOR_VERSION_ARB as c_int,
-//             3,
-//             WGL_CONTEXT_MINOR_VERSION_ARB as c_int,
-//             3,
-//             WGL_CONTEXT_PROFILE_MASK_ARB as c_int,
-//             WGL_CONTEXT_CORE_PROFILE_BIT_ARB as c_int,
-//             0,
-//         ];
+            let egl_config = egl_config_from_display(egl_display);
 
-//         let wglCreateContextAttribsARB = match WGL_EXTENSION_FUNCTIONS.wglCreateContextAttribsARB {
-//             None => return Err(InstanceError::RequiredExtensionUnavailable),
-//             Some(ref func) => func,
-//         };
+            let mut egl_context_attributes = [
+                egl::CONTEXT_CLIENT_VERSION as EGLint,
+                2, // Request opengl ES2.0
+                egl::NONE as EGLint,
+            ];
 
-//         let gl33_context = unsafe {
-//             wglCreateContextAttribsARB(real_dc, std::ptr::null_mut(), gl33_attribs.as_ptr())
-//         };
-//         if gl33_context.is_null() {
-//             return Err(InstanceError::ContextCreationFailed);
-//         }
+            let egl_context = egl.CreateContext(
+                egl_display,
+                egl_config,
+                std::ptr::null_mut(),
+                egl_context_attributes.as_ptr(),
+            );
 
-//         Ok(WglContext(gl33_context as u64))
-//     }
+            if egl_context == egl::NO_CONTEXT {
+                let err = egl.GetError();
+                return Err(InstanceError::ContextCreationFailed);
+            }
 
-//     // 调用了这个之后，gl的函数 才能用；
-//     // wasm32 cfg 空实现
-//     pub fn make_current(&self, surface: Option<&WglSurface>, context: Option<&WglContext>) {
-//         if let Some(surface) = surface {
-//             if let Some(context) = context {
-//                 let ok = unsafe { wglMakeCurrent(surface.0 as HDC, context.0 as HGLRC) };
-//                 assert_ne!(ok, FALSE);
-//             }
-//         }else{
-//             let ok = unsafe { wglMakeCurrent(std::ptr::null_mut(), std::ptr::null_mut()) };
-//             assert_ne!(ok, FALSE);
-//         }
-        
-//     }
+            Ok(EglContext {
+                egl_context,
+                egl_display,
+            })
+        }
+    }
 
-//     // 交换 Surface 中的 双缓冲
-//     // wasm32 cfg 空实现
-//     pub fn swap_buffers(&self, surface: &WglSurface) {
-//         unsafe { SwapBuffers(surface.0 as HDC) };
-//     }
-// }
+    // 调用了这个之后，gl的函数 才能用；
+    // wasm32 cfg 空实现
+    pub fn make_current(
+        &mut self,
+        surface: Option<&EglSurface>,
+        context: Option<&EglContext>,
+    ) -> Option<&glow::Context> {
+        let egl = &EGL_FUNCTIONS.0;
+        let egl_display = self.0;
+        if let Some(context) = context {
+            if let Some(surface) = surface {
+                let ok = unsafe {
+                    egl.MakeCurrent(
+                        egl_display,
+                        surface.egl_surface,
+                        surface.egl_surface,
+                        context.egl_context,
+                    )
+                };
+                assert_ne!(ok, egl::FALSE);
+                if self.1.is_none() {
+                    let context = unsafe {
+                        glow::Context::from_loader_function(|symbol_name| {
+                            get_proc_address(symbol_name)
+                        })
+                    };
+                    let _ = self.1.replace(context);
+                }
+                return Some(self.1.as_ref().unwrap());
+            } else {
+                unsafe {
+                    let ok = unsafe {
+                        egl.MakeCurrent(
+                            egl_display,
+                            egl::NO_SURFACE,
+                            egl::NO_SURFACE,
+                            context.egl_context,
+                        )
+                    };
+                    assert_ne!(ok, egl::FALSE);
+                }
+            }
+        } else {
+            unsafe {
+                let ok = egl.MakeCurrent(
+                    egl_display,
+                    egl::NO_SURFACE,
+                    egl::NO_SURFACE,
+                    egl::NO_CONTEXT,
+                );
+                assert_ne!(ok, egl::FALSE);
+            }
+        }
+        None
+    }
+
+    // 交换 Surface 中的 双缓冲
+    // wasm32 cfg 空实现
+    pub fn swap_buffers(&self, surface: &EglSurface) {
+        let egl = &EGL_FUNCTIONS.0;
+        let egl_display = self.0;
+
+        unsafe { egl.SwapBuffers(egl_display, surface.egl_surface) };
+    }
+}

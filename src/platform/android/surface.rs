@@ -1,16 +1,20 @@
-pub struct Surface {
-    // #[cfg(not(target_arch = "wasm32"))]
-    // TODO
+use crate::platform::android::egl::types::{EGLDisplay, EGLSurface};
+
+use super::util::EGL_FUNCTIONS;
+
+pub struct EglSurface {
+    pub(crate) width: i32,
+    pub(crate) height: i32,
+    pub(crate) egl_surface: EGLSurface,
+    pub(crate) egl_display: EGLDisplay,
 }
 
-unsafe impl Sync for Surface {}
-unsafe impl Send for Surface {}
+unsafe impl Sync for EglSurface {}
+unsafe impl Send for EglSurface {}
 
-impl Drop for Surface {
+impl Drop for EglSurface {
     fn drop(&mut self) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            todo!()
-        }
+        let egl = &EGL_FUNCTIONS.0;
+        unsafe { egl.DestroySurface(self.egl_display, self.egl_surface) };
     }
 }
