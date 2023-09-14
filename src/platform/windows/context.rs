@@ -5,10 +5,8 @@ use winapi::{
     um::wingdi::{wglDeleteContext, wglGetCurrentContext, wglMakeCurrent},
 };
 
+#[derive(Debug)]
 pub struct WglContext(pub u64);
-
-unsafe impl Sync for WglContext {}
-unsafe impl Send for WglContext {}
 
 impl Drop for WglContext {
     fn drop(&mut self) {

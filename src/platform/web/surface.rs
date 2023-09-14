@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct WebSurface(pub glow::Context);
 
 unsafe impl Sync for WebSurface {}

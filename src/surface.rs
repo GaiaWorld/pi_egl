@@ -7,6 +7,7 @@ use crate::platform::android::surface::EglSurface as SurfaceInner;
 #[cfg(target_arch = "wasm32")]
 use crate::platform::web::surface::WebSurface as SurfaceInner;
 
+#[derive(Debug)]
 pub struct Surface {
     pub(crate) surface: SurfaceInner
 }

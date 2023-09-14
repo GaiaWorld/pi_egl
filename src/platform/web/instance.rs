@@ -1,10 +1,10 @@
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
 use wasm_bindgen::JsCast;
 
+use super::{context::WebContext, surface::WebSurface};
 use crate::{InstanceError, PowerPreference};
 
-use super::{context::WebContext, surface::WebSurface};
-
+#[derive(Debug)]
 pub struct WebInstance(Option<glow::Context>);
 
 impl WebInstance {
@@ -41,7 +41,7 @@ impl WebInstance {
             .unwrap();
 
         Ok(WebSurface(glow::Context::from_webgl2_context(
-            webgl2_context
+            webgl2_context,
         )))
     }
 

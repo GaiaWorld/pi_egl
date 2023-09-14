@@ -13,13 +13,12 @@ use winapi::{
     },
 };
 
-use crate::{platform::windows::util::set_dc_pixel_format, InstanceError, PowerPreference};
-
 use super::{
     context::WglContext,
     surface::WglSurface,
     util::{get_proc_address, set_exported_variables, HiddenWindow, WGL_EXTENSION_FUNCTIONS},
 };
+use crate::{platform::windows::util::set_dc_pixel_format, InstanceError, PowerPreference};
 
 type GLenum = u32;
 
@@ -42,6 +41,7 @@ const WGL_ALPHA_BITS_ARB: GLenum = 0x201b;
 const WGL_CONTEXT_CORE_PROFILE_BIT_ARB: GLenum = 0x00000001;
 // const WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: GLenum = 0x00000002;
 
+#[derive(Debug)]
 pub struct WglInstance(Option<glow::Context>, HWND);
 
 impl Drop for WglInstance {
@@ -67,7 +67,7 @@ impl WglInstance {
             return Err(InstanceError::IncompatibleWindowHandle);
         };
 
-        let context_dc =  unsafe { winuser::GetDC(self.1 as HWND) };
+        let context_dc = unsafe { winuser::GetDC(self.1 as HWND) };
         let pixel_format = unsafe { wingdi::GetPixelFormat(context_dc) };
         set_dc_pixel_format(real_dc, pixel_format);
 

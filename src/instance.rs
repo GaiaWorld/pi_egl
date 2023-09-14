@@ -12,6 +12,7 @@ use crate::platform::web::instance::WebInstance as InstanceInner;
 #[cfg(target_os = "android")]
 use crate::platform::android::instance::EglInstance as InstanceInner;
 
+#[derive(Debug)]
 pub struct Instance {
     instance: InstanceInner,
 }
