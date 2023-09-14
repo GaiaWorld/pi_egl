@@ -42,18 +42,26 @@ const WGL_CONTEXT_CORE_PROFILE_BIT_ARB: GLenum = 0x00000001;
 // const WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB: GLenum = 0x00000002;
 
 #[derive(Debug)]
-pub struct WglInstance(Option<glow::Context>, HWND);
+pub struct WglInstance {
+    context: Option<glow::Context>,
+    window_hwnd: HWND,
+    is_vsync: bool,
+}
 
 impl Drop for WglInstance {
     fn drop(&mut self) {
-        let _ = unsafe { winuser::DestroyWindow(self.1) };
+        let _ = unsafe { winuser::DestroyWindow(self.window_hwnd) };
     }
 }
 
 impl WglInstance {
-    pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
+    pub fn new(power: PowerPreference, is_vsync: bool) -> Result<Self, InstanceError> {
         set_exported_variables(power);
-        Ok(WglInstance(None, HiddenWindow::create()))
+        Ok(WglInstance {
+            context: None,
+            window_hwnd: HiddenWindow::create(),
+            is_vsync,
+        })
     }
 
     // 带双缓冲的 Surface
@@ -67,7 +75,7 @@ impl WglInstance {
             return Err(InstanceError::IncompatibleWindowHandle);
         };
 
-        let context_dc = unsafe { winuser::GetDC(self.1 as HWND) };
+        let context_dc = unsafe { winuser::GetDC(self.window_hwnd as HWND) };
         let pixel_format = unsafe { wingdi::GetPixelFormat(context_dc) };
         set_dc_pixel_format(real_dc, pixel_format);
 
@@ -105,7 +113,7 @@ impl WglInstance {
             Some(ref func) => func,
         };
 
-        let real_dc = unsafe { winuser::GetDC(self.1) };
+        let real_dc = unsafe { winuser::GetDC(self.window_hwnd) };
         let (mut pixel_format, mut pixel_format_count) = (0, 0);
         let ok = unsafe {
             wglChoosePixelFormatARB(
@@ -133,7 +141,7 @@ impl WglInstance {
         // println!()
         assert_ne!(ok, FALSE);
 
-        // // Specify that we want to create an OpenGL 3.3 core profile context
+        // Specify that we want to create an OpenGL 3.3 core profile context
         let gl33_attribs = [
             WGL_CONTEXT_MAJOR_VERSION_ARB as c_int,
             3,
@@ -152,7 +160,18 @@ impl WglInstance {
         let gl33_context = unsafe {
             wglCreateContextAttribsARB(real_dc, std::ptr::null_mut(), gl33_attribs.as_ptr())
         };
-        let err = unsafe { GetLastError() };
+        if !self.is_vsync {
+            if let Some(func) = WGL_EXTENSION_FUNCTIONS.wglSwapIntervalEXT {
+                let ok = unsafe { func(0) };
+                if ok != 0 {
+                    let err = unsafe { GetLastError() };
+                    println!("vsync closed failed!!! error code: {}", err);
+                } else {
+                    println!("vsync closed successfully!!!!")
+                }
+            }
+        }
+
         if gl33_context.is_null() {
             return Err(InstanceError::ContextCreationFailed);
         }
@@ -172,16 +191,16 @@ impl WglInstance {
                 let ok = unsafe { wglMakeCurrent(surface.0 as HDC, context.0 as HGLRC) };
                 // set_dc_pixel_format(dc, pixel_format)
                 assert_ne!(ok, FALSE);
-                if self.0.is_none() {
+                if self.context.is_none() {
                     let gl = unsafe {
                         glow::Context::from_loader_function(|symbol_name| {
                             get_proc_address(symbol_name)
                         })
                     };
-                    self.0.replace(gl);
+                    self.context.replace(gl);
                 }
 
-                return Some(self.0.as_ref().unwrap());
+                return Some(self.context.as_ref().unwrap());
             } else {
                 let ok = unsafe { wglMakeCurrent(std::ptr::null_mut(), context.0 as HGLRC) };
                 assert_ne!(ok, FALSE);

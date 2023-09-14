@@ -18,7 +18,7 @@ fn main() {
         .build(&event_loop)
         .unwrap();
 
-    let mut instance = Instance::new(PowerPreference::HighPerformance, true).unwrap();
+    let mut instance = Instance::new(PowerPreference::HighPerformance, false).unwrap();
     let context = instance.create_context().unwrap();
     let surface = instance.create_surface(&window).unwrap();
 
@@ -44,7 +44,7 @@ fn main() {
             },
 
             Event::RedrawRequested(_) => {
-                unsafe { println!("error: {}", gl.get_error()) };
+                // unsafe { println!("error: {}", gl.get_error()) };
                 instance.swap_buffers(&surface)
             }
             _ => {}
