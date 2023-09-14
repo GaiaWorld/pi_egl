@@ -2,6 +2,7 @@ pub mod instance;
 pub mod surface;
 pub mod context;
 mod util;
+mod swappy;
 
 // #[cfg(target_os = "android")]
 #[allow(non_camel_case_types)]

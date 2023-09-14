@@ -167,7 +167,7 @@ impl WglInstance {
                     let err = unsafe { GetLastError() };
                     println!("vsync closed failed!!! error code: {}", err);
                 } else {
-                    println!("vsync closed successfully!!!!")
+                    println!("vsync closed successfully!!!")
                 }
             }
         }

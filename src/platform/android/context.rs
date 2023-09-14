@@ -2,6 +2,7 @@ use crate::platform::android::egl::types::{EGLContext, EGLDisplay};
 
 use super::util::EGL_FUNCTIONS;
 
+#[derive(Debug)]
 pub struct EglContext {
     pub egl_context: EGLContext,
     pub egl_display: EGLDisplay,

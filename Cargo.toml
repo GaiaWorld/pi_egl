@@ -43,9 +43,10 @@ gl_generator = "0.14"
 [dev-dependencies]
 winit = {registry = "yn", version = "0.27"}
 
-[target.'cfg(target_os = "android")'.dev-dependencies]
+[target.'cfg(target_os = "android")'.dependencies]
 # Coordinate the next winit release with android-ndk-rs: https://github.com/rust-windowing/winit/issues/1995
 ndk-glue = "0.7.0"
+jni = "0.19"
 
 [[example]]
 name = "hello_android"

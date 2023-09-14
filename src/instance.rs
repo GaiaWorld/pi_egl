@@ -95,6 +95,7 @@ pub enum InstanceError {
     RequiredExtensionUnavailable,
     IncompatibleWindowHandle,
     ContextCreationFailed,
+    JNIFailed
 }
 
 // impl Display for InstanceError {
