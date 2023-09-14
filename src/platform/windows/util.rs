@@ -62,6 +62,7 @@ pub(crate) struct WGLExtensionFunctions {
             nNumFormats: *mut UINT,
         ) -> BOOL,
     >,
+    pub wglSwapIntervalEXT: Option<unsafe extern "C" fn(interval: c_int) -> BOOL>,
 }
 
 fn extension_loader_thread() -> WGLExtensionFunctions {
@@ -166,6 +167,11 @@ extern "system" fn extension_loader_window_proc(
                 (*wgl_extension_functions).wglChoosePixelFormatARB = Some(mem::transmute(
                     wglGetProcAddress(&b"wglChoosePixelFormatARB\0"[0] as *const u8 as LPCSTR),
                 ));
+
+                let func = wglGetProcAddress(&b"wglSwapIntervalEXT\0"[0] as *const u8 as LPCSTR);
+                if !func.is_null() {
+                    (*wgl_extension_functions).wglSwapIntervalEXT = Some(mem::transmute(func));
+                }
 
                 wglMakeCurrent(dc, std::ptr::null_mut());
                 wglDeleteContext(gl_context);
@@ -332,7 +338,7 @@ impl HiddenWindow {
         }
     }
 
-    pub fn create() ->  HWND {
+    pub fn create() -> HWND {
         unsafe {
             let instance = libloaderapi::GetModuleHandleA(ptr::null_mut());
             let window_class_name = &b"SurfmanHiddenWindow\0"[0] as *const u8 as LPCSTR;

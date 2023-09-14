@@ -117,7 +117,7 @@ impl EglInstance {
         }
     }
 
-    // 调用了这个之后，gl的函数 才能用；
+    // 调用了这个之后，gl的函数才能用；
     // wasm32 cfg 空实现
     pub fn make_current(
         &mut self,
