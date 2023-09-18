@@ -2,7 +2,7 @@ use crate::platform::android::egl::types::{EGLDisplay, EGLSurface};
 
 use super::util::EGL_FUNCTIONS;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct EglSurface {
     pub(crate) width: i32,
     pub(crate) height: i32,

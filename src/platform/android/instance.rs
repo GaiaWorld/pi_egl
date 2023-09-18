@@ -2,11 +2,13 @@ use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_void};
 
+#[cfg(feature = "swappy")]
 use super::swappy::{
     SwappyGL_destroy, SwappyGL_enableStats, SwappyGL_init, SwappyGL_isEnabled,
     SwappyGL_setAutoPipelineMode, SwappyGL_setAutoSwapInterval, SwappyGL_setSwapIntervalNS,
     SwappyGL_setWindow, SwappyGL_swap,
 };
+
 use super::{context::EglContext, surface::EglSurface, util::EGL_FUNCTIONS};
 use crate::{
     platform::android::egl::{self, EGLint},
@@ -24,14 +26,21 @@ impl Drop for EglInstance {
             let result = egl.Terminate(self.0);
             assert_ne!(result, egl::FALSE);
             self.0 = egl::NO_DISPLAY;
-            SwappyGL_destroy();
+            #[cfg(feature = "swappy")]
+            {
+                SwappyGL_destroy();
+            }
         }
     }
 }
 
 impl EglInstance {
     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
-        swappy_init();
+        #[cfg(feature = "swappy")]
+        {
+            swappy_init();
+        }
+
         let egl = &EGL_FUNCTIONS.0;
 
         unsafe {
@@ -61,9 +70,12 @@ impl EglInstance {
             return Err(InstanceError::IncompatibleWindowHandle);
         };
         unsafe {
-            SwappyGL_setWindow(native_window);
-            let enable = SwappyGL_isEnabled();
-            println!("======SwappyGL enable: {}", enable);
+            #[cfg(feature = "swappy")]
+            {
+                SwappyGL_setWindow(native_window);
+                let enable = SwappyGL_isEnabled();
+                println!("======SwappyGL enable: {}", enable);
+            }
 
             let egl_config = egl_config_from_display(egl_display);
 
@@ -189,8 +201,14 @@ impl EglInstance {
     pub fn swap_buffers(&self, surface: &EglSurface) {
         let egl = &EGL_FUNCTIONS.0;
         let egl_display = self.0;
-        SwappyGL_swap(egl_display, surface.egl_surface);
-        // unsafe { egl.SwapBuffers(egl_display, surface.egl_surface) };
+        #[cfg(feature = "swappy")]
+        {
+            unsafe { SwappyGL_swap(egl_display, surface.egl_surface) };
+        }
+        #[cfg(not(feature = "swappy")) ]
+        {
+            unsafe { egl.SwapBuffers(egl_display, surface.egl_surface) };
+        }
     }
 }
 
@@ -205,7 +223,8 @@ fn get_gl_address(symbol_name: &str) -> *const c_void {
     }
 }
 
-fn swappy_init()-> Result<(), InstanceError> {
+#[cfg(feature = "swappy")]
+fn swappy_init() -> Result<(), InstanceError> {
     let native_activity = ndk_glue::native_activity();
     let vm_ptr = native_activity.vm();
     let vm = match unsafe { jni::JavaVM::from_raw(vm_ptr) } {
@@ -238,4 +257,5 @@ fn swappy_init()-> Result<(), InstanceError> {
         SwappyGL_setSwapIntervalNS(1000000000 / 120);
     }
     vm.detach_current_thread();
+    Ok(())
 }
