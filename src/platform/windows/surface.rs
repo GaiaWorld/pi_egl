@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct WglSurface(pub u64);
 
 impl Drop for WglSurface {

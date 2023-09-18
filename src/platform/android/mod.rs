@@ -2,6 +2,8 @@ pub mod instance;
 pub mod surface;
 pub mod context;
 mod util;
+
+#[cfg(feature = "swappy")]
 mod swappy;
 
 // #[cfg(target_os = "android")]

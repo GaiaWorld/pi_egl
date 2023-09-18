@@ -11,6 +11,9 @@ keywords = ["pi", "egl"]
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+swappy =[]
+
 [dependencies]
 log = "0.4"
 raw-window-handle = "0.5"
