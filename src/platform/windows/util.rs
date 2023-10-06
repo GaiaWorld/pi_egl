@@ -8,7 +8,6 @@ use std::{
     thread,
 };
 
-use log::warn;
 use std::thread::JoinHandle;
 use winapi::{
     shared::{
@@ -194,15 +193,8 @@ pub(crate) fn set_exported_variables(preference: PowerPreference) {
             libloaderapi::GetProcAddress(current_module, AMD_GPU_SELECT_SYMBOL.as_ptr() as LPCSTR)
                 as *mut i32;
         if nvidia_gpu_select_variable.is_null() || amd_gpu_select_variable.is_null() {
-            println!(
-                "surfman: Could not find the NVIDIA and/or AMD GPU selection symbols. \
-                   Your application may end up using the wrong GPU (discrete vs. \
-                   integrated). To fix this issue, ensure that you are using the MSVC \
-                   version of Rust and invoke the `init_env!()` macro at the root of \
-                   your crate."
-            );
-            warn!(
-                "surfman: Could not find the NVIDIA and/or AMD GPU selection symbols. \
+            log::warn!(
+                "pi_egl: Could not find the NVIDIA and/or AMD GPU selection symbols. \
                    Your application may end up using the wrong GPU (discrete vs. \
                    integrated). To fix this issue, ensure that you are using the MSVC \
                    version of Rust and invoke the `init_env!()` macro at the root of \

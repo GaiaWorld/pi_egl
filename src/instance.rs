@@ -12,6 +12,8 @@ use crate::platform::web::instance::WebInstance as InstanceInner;
 #[cfg(target_os = "android")]
 use crate::platform::android::instance::EglInstance as InstanceInner;
 
+crate::init_env!();
+
 #[derive(Debug)]
 pub struct Instance {
     instance: InstanceInner,
@@ -20,16 +22,10 @@ pub struct Instance {
 unsafe impl Sync for Instance {}
 unsafe impl Send for Instance {}
 
-impl Drop for Instance {
-    fn drop(&mut self) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {}
-    }
-}
-
 impl Instance {
     // Display 封装在里面，不对外曝露
     // is_vsync: SwapBuffers 是否 重置同步
+    #[inline]
     pub fn new(power: PowerPreference, is_vsync: bool) -> Result<Self, InstanceError> {
         // Windows下: LowPower 集显, HighPerformance 独显
         {
@@ -40,6 +36,7 @@ impl Instance {
     }
 
     // 带双缓冲的 Surface
+    #[inline]
     pub fn create_surface<W: HasRawWindowHandle + HasRawDisplayHandle>(
         &self,
         window: &W,
@@ -51,6 +48,7 @@ impl Instance {
     }
 
     // GLES 3.0 / WebGL2
+    #[inline]
     pub fn create_context(&self) -> Result<Context, InstanceError> {
         {
             let context = self.instance.create_context()?;
@@ -60,6 +58,7 @@ impl Instance {
 
     // 调用了这个之后，gl的函数 才能用；
     // wasm32 cfg 空实现
+    #[inline]
     pub fn make_current<'a>(
         &'a mut self,
         surface: Option<&'a Surface>,
@@ -80,8 +79,14 @@ impl Instance {
         }
     }
 
+    #[inline]
+    pub fn get_glow<'a>(&'a self) -> &glow::Context {
+        self.instance.get_glow()
+    }
+
     // 交换 Surface 中的 双缓冲
     // wasm32 cfg 空实现
+    #[inline]
     pub fn swap_buffers(&self, surface: &Surface) {
         {
             self.instance.swap_buffers(&surface.surface)
@@ -95,7 +100,7 @@ pub enum InstanceError {
     RequiredExtensionUnavailable,
     IncompatibleWindowHandle,
     ContextCreationFailed,
-    JNIFailed
+    JNIFailed,
 }
 
 // impl Display for InstanceError {

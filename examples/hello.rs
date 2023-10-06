@@ -1,5 +1,5 @@
 use glow::{HasContext, COLOR_BUFFER_BIT};
-use pi_egl::{init_env, Instance, PowerPreference};
+use pi_egl::{Instance, PowerPreference};
 
 use winit::{
     dpi::PhysicalSize,
@@ -7,9 +7,6 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-
-init_env!();
-
 
 fn main() {
     let event_loop = EventLoop::new();
