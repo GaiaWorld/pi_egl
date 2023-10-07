@@ -1,6 +1,6 @@
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
 use std::ffi::CString;
-use std::os::raw::{c_char, c_int, c_void};
+use std::os::raw::{c_char, c_void};
 
 #[cfg(feature = "swappy")]
 use super::swappy::{
@@ -35,7 +35,7 @@ impl Drop for EglInstance {
 }
 
 impl EglInstance {
-    pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
+    pub fn new(_power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
         #[cfg(feature = "swappy")]
         {
             swappy_init();
@@ -115,7 +115,7 @@ impl EglInstance {
 
             let egl_config = egl_config_from_display(egl_display);
 
-            let mut egl_context_attributes = [
+            let egl_context_attributes = [
                 egl::CONTEXT_CLIENT_VERSION as EGLint,
                 2, // Request opengl ES2.0
                 egl::NONE as EGLint,
@@ -129,7 +129,7 @@ impl EglInstance {
             );
 
             if egl_context == egl::NO_CONTEXT {
-                let err = egl.GetError();
+                let _err = egl.GetError();
                 return Err(InstanceError::ContextCreationFailed);
             }
 
@@ -142,11 +142,7 @@ impl EglInstance {
 
     // 调用了这个之后，gl的函数才能用；
     // wasm32 cfg 空实现
-    pub fn make_current(
-        &mut self,
-        surface: Option<&EglSurface>,
-        context: Option<&EglContext>,
-    ) {
+    pub fn make_current(&mut self, surface: Option<&EglSurface>, context: Option<&EglContext>) {
         let egl = &EGL_FUNCTIONS.0;
         let egl_display = self.0;
 
@@ -172,17 +168,15 @@ impl EglInstance {
                     let _ = self.1.replace(context);
                 }
             } else {
-                unsafe {
-                    let ok = unsafe {
-                        egl.MakeCurrent(
-                            egl_display,
-                            egl::NO_SURFACE,
-                            egl::NO_SURFACE,
-                            context.egl_context,
-                        )
-                    };
-                    assert_ne!(ok, egl::FALSE);
-                }
+                let ok = unsafe {
+                    egl.MakeCurrent(
+                        egl_display,
+                        egl::NO_SURFACE,
+                        egl::NO_SURFACE,
+                        context.egl_context,
+                    )
+                };
+                assert_ne!(ok, egl::FALSE);
             }
         } else {
             unsafe {
@@ -199,7 +193,7 @@ impl EglInstance {
 
     #[inline]
     pub fn get_glow<'a>(&'a self) -> &glow::Context {
-        todo!()
+        self.1.as_ref().unwrap()
     }
 
     // 交换 Surface 中的 双缓冲
@@ -211,7 +205,7 @@ impl EglInstance {
         {
             unsafe { SwappyGL_swap(egl_display, surface.egl_surface) };
         }
-        #[cfg(not(feature = "swappy")) ]
+        #[cfg(not(feature = "swappy"))]
         {
             unsafe { egl.SwapBuffers(egl_display, surface.egl_surface) };
         }

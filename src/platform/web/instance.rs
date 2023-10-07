@@ -1,11 +1,20 @@
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
+
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
 use wasm_bindgen::JsCast;
 
 use super::{context::WebContext, surface::WebSurface};
 use crate::{InstanceError, PowerPreference};
 
+lazy_static! {
+    pub static ref ID: AtomicU64 = AtomicU64::from(0);
+}
+
 #[derive(Debug)]
-pub struct WebInstance(Option<glow::Context>);
+pub struct WebInstance(Option<WebSurface>);
 
 impl WebInstance {
     #[inline]
@@ -39,10 +48,12 @@ impl WebInstance {
             .unwrap()
             .dyn_into::<web_sys::WebGl2RenderingContext>()
             .unwrap();
+        let id = ID.fetch_add(1, Ordering::Relaxed);
 
-        Ok(WebSurface(glow::Context::from_webgl2_context(
-            webgl2_context,
-        )))
+        Ok(WebSurface {
+            context: Arc::new(glow::Context::from_webgl2_context(webgl2_context)),
+            id,
+        })
     }
 
     #[inline]
@@ -55,17 +66,19 @@ impl WebInstance {
         surface: Option<&'a WebSurface>,
         context: Option<&WebContext>,
     ) {
-        if let Some(context) = context {
-            if let Some(surface) = surface {
-                todo!()
-                // return Some(&surface.0);
+        if let Some(surface) = surface {
+            if let Some(bind_surface) = &self.0 {
+                if bind_surface == surface {
+                    return;
+                }
             }
+            self.0.replace(surface.clone());
         }
     }
 
     #[inline]
     pub fn get_glow<'a>(&'a self) -> &glow::Context {
-        todo!()
+        self.0.as_ref().unwrap().context.as_ref()
     }
 
     #[inline]

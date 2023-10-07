@@ -263,9 +263,9 @@ impl<'a> Drop for DCGuard<'a> {
 }
 
 impl HiddenWindow {
-    pub(crate) fn new() -> HiddenWindow {
+    pub(crate) fn _new() -> HiddenWindow {
         let (sender, receiver) = mpsc::channel();
-        let join_handle = thread::spawn(|| HiddenWindow::thread(sender));
+        let join_handle = thread::spawn(|| HiddenWindow::_thread(sender));
         let window = receiver.recv().unwrap().0;
         HiddenWindow {
             window,
@@ -274,12 +274,12 @@ impl HiddenWindow {
     }
 
     #[inline]
-    pub(crate) fn get_dc(&self) -> DCGuard {
-        unsafe { DCGuard::new(winuser::GetDC(self.window), Some(self.window)) }
+    pub(crate) fn _get_dc(&self) -> DCGuard {
+        unsafe { DCGuard::_new(winuser::GetDC(self.window), Some(self.window)) }
     }
 
     // The thread that creates the window for off-screen contexts.
-    fn thread(sender: Sender<SendableHWND>) {
+    fn _thread(sender: Sender<SendableHWND>) {
         unsafe {
             let instance = libloaderapi::GetModuleHandleA(ptr::null_mut());
             let window_class_name = &b"SurfmanHiddenWindow\0"[0] as *const u8 as LPCSTR;
@@ -384,7 +384,7 @@ impl HiddenWindow {
 }
 
 impl<'a> DCGuard<'a> {
-    pub(crate) fn new(dc: HDC, window: Option<HWND>) -> DCGuard<'a> {
+    pub(crate) fn _new(dc: HDC, window: Option<HWND>) -> DCGuard<'a> {
         DCGuard {
             dc,
             window,

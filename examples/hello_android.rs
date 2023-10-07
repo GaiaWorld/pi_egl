@@ -1,3 +1,5 @@
+#![cfg(any(target_os = "android"))]
+
 use glow::{HasContext, COLOR_BUFFER_BIT};
 use pi_egl::{Instance, PowerPreference, Surface};
 
@@ -51,8 +53,9 @@ fn main() {
                 }
             }
             Event::Resumed => {
-                let s = instance.create_surface(&window);
-                let context = instance.make_current(Some(&s), Some(&context));
+                let s = instance.create_surface(&window).unwrap();
+                instance.make_current(Some(&s), Some(&context));
+                let context = instance.get_glow();
 
                 let context = unsafe {
                     std::mem::transmute::<&'_ glow::Context, &'static glow::Context>(context)
