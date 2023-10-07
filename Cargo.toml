@@ -12,7 +12,8 @@ keywords = ["pi", "egl"]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-swappy =[]
+swappy = []
+shared-stdcxx = []
 
 [dependencies]
 pi_share = "0.4"

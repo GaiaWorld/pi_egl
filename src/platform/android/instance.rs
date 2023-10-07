@@ -38,7 +38,7 @@ impl EglInstance {
     pub fn new(_power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
         #[cfg(feature = "swappy")]
         {
-            swappy_init();
+            let _ = swappy_init();
         }
 
         let egl = &EGL_FUNCTIONS.0;
@@ -199,7 +199,6 @@ impl EglInstance {
     // 交换 Surface 中的 双缓冲
     // wasm32 cfg 空实现
     pub fn swap_buffers(&self, surface: &EglSurface) {
-        let egl = &EGL_FUNCTIONS.0;
         let egl_display = self.0;
         #[cfg(feature = "swappy")]
         {
@@ -207,6 +206,7 @@ impl EglInstance {
         }
         #[cfg(not(feature = "swappy"))]
         {
+            let egl = &EGL_FUNCTIONS.0;
             unsafe { egl.SwapBuffers(egl_display, surface.egl_surface) };
         }
     }

@@ -19,9 +19,7 @@
 // SwappyGL_setUseAffinity
 // SwappyGL_setWindow
 // SwappyGL_swap
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
+#![allow(warnings)]
 
 use jni::{sys::jobject, JNIEnv};
 use libc::{c_int, c_uchar, c_uint, c_ulonglong, c_void};
