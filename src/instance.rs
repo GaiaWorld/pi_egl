@@ -64,19 +64,17 @@ impl Instance {
         surface: Option<&'a Surface>,
         context: Option<&Context>,
     ) -> Option<&glow::Context> {
-        {
-            let mut s = None;
-            if let Some(t) = surface {
-                s = Some(&t.surface)
-            }
-
-            let mut c = None;
-            if let Some(t) = context {
-                c = Some(&t.context)
-            }
-
-            self.instance.make_current(s, c)
+        let mut s = None;
+        if let Some(t) = surface {
+            s = Some(&t.surface)
         }
+
+        let mut c = None;
+        if let Some(t) = context {
+            c = Some(&t.context)
+        }
+
+        self.instance.make_current(s, c)
     }
 
     #[inline]
@@ -88,9 +86,7 @@ impl Instance {
     // wasm32 cfg 空实现
     #[inline]
     pub fn swap_buffers(&self, surface: &Surface) {
-        {
-            self.instance.swap_buffers(&surface.surface)
-        }
+        self.instance.swap_buffers(&surface.surface)
     }
 }
 

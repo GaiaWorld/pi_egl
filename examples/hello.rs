@@ -19,20 +19,14 @@ fn main() {
     let context = instance.create_context().unwrap();
     let surface = instance.create_surface(&window).unwrap();
 
-    let gl = instance
-        .make_current(Some(&surface), Some(&context))
-        .unwrap();
-    let gl = unsafe { std::mem::transmute::<&'_  glow::Context, &'static glow::Context>(gl) };
-
+    let mut r = 0.0;
     event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Wait;
+        *control_flow = ControlFlow::Poll;
 
         match event {
-            winit::event::Event::MainEventsCleared => unsafe {
-                // gl.Viewport(0, 0, 1024, 768);
-                gl.clear_color(1.0, 0.0, 0.0, 1.0);
-                gl.clear(COLOR_BUFFER_BIT);
-            },
+            winit::event::Event::MainEventsCleared => {
+                window.request_redraw();
+            }
             winit::event::Event::WindowEvent { event, .. } => match event {
                 winit::event::WindowEvent::CloseRequested => {
                     *control_flow = winit::event_loop::ControlFlow::Exit;
@@ -41,8 +35,33 @@ fn main() {
             },
 
             Event::RedrawRequested(_) => {
-                // unsafe { println!("error: {}", gl.get_error()) };
-                instance.swap_buffers(&surface)
+                unsafe {
+                    instance
+                        .make_current(Some(&surface), Some(&context))
+                        .unwrap();
+
+                    let gl = instance.get_glow();
+
+                    r += 0.01;
+                    if r > 1.0 {
+                        r = 0.0;
+                    }
+
+                    gl.clear_color(r, 0.0, 0.0, 1.0);
+                    gl.clear(COLOR_BUFFER_BIT);
+
+                    instance.make_current(None, None);
+                }
+
+                {
+                    instance
+                        .make_current(Some(&surface), Some(&context))
+                        .unwrap();
+
+                    instance.swap_buffers(&surface);
+
+                    instance.make_current(None, None);
+                }
             }
             _ => {}
         }
