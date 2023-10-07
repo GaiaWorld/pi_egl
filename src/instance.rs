@@ -1,3 +1,4 @@
+use pi_share::Share;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 
 use super::{Context, PowerPreference, Surface};
@@ -43,7 +44,9 @@ impl Instance {
     ) -> Result<Surface, InstanceError> {
         {
             let surface = self.instance.create_surface(window)?;
-            Ok(Surface { surface })
+            Ok(Surface {
+                surface: Share::new(surface),
+            })
         }
     }
 
@@ -74,6 +77,7 @@ impl Instance {
             c = Some(&t.context)
         }
 
+        let s = s.map(|v| v.as_ref());
         self.instance.make_current(s, c)
     }
 
