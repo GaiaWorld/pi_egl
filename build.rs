@@ -13,9 +13,9 @@ fn main() {
         #[cfg(feature = "swappy")]
         {
             if cfg!(feature = "shared-stdcxx"){
-                add_lib("c++_shared", false);
+                _add_lib("c++_shared", false);
             }else{
-                add_lib("c++_static", false);
+                _add_lib("c++_static", false);
             }
             println!("cargo:rustc-link-search=native={}", "libs/");
             println!("cargo:rustc-link-lib=static={}", "swappy");
@@ -27,7 +27,7 @@ fn main() {
     }
 }
 
-fn add_lib(_name: impl AsRef<str>, _static: bool) {
+fn _add_lib(_name: impl AsRef<str>, _static: bool) {
     #[cfg(not(feature = "test"))]
     println!(
         "cargo:rustc-link-lib={}{}",
