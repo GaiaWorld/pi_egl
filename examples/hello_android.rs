@@ -51,13 +51,15 @@ fn main() {
                 }
             }
             Event::Resumed => {
-                let s = instance.create_surface(&window).unwrap();
-                let context = instance.make_current(Some(&s), Some(&context)).unwrap();
+                let s = instance.create_surface(&window);
+                let context = instance.make_current(Some(&s), Some(&context));
 
                 let context = unsafe {
                     std::mem::transmute::<&'_ glow::Context, &'static glow::Context>(context)
                 };
+
                 gl.replace(context);
+
                 surface.replace(s);
             }
             Event::Suspended => {

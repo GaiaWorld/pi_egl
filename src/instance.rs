@@ -66,7 +66,7 @@ impl Instance {
         &'a mut self,
         surface: Option<&'a Surface>,
         context: Option<&Context>,
-    ) -> Option<&glow::Context> {
+    ) {
         let mut s = None;
         if let Some(t) = surface {
             s = Some(&t.surface)
@@ -78,7 +78,7 @@ impl Instance {
         }
 
         let s = s.map(|v| v.as_ref());
-        self.instance.make_current(s, c)
+        self.instance.make_current(s, c);
     }
 
     #[inline]

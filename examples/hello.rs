@@ -36,9 +36,7 @@ fn main() {
 
             Event::RedrawRequested(_) => {
                 unsafe {
-                    instance
-                        .make_current(Some(&surface), Some(&context))
-                        .unwrap();
+                    instance.make_current(Some(&surface), Some(&context));
 
                     let gl = instance.get_glow();
 
@@ -54,9 +52,7 @@ fn main() {
                 }
 
                 {
-                    instance
-                        .make_current(Some(&surface), Some(&context))
-                        .unwrap();
+                    instance.make_current(Some(&surface), Some(&context));
 
                     instance.swap_buffers(&surface);
 

@@ -9,6 +9,7 @@ use winapi::{
 pub struct WglContext(pub u64);
 
 impl Drop for WglContext {
+    #[inline]
     fn drop(&mut self) {
         if unsafe { wglGetCurrentContext() } == self.0 as HGLRC {
             unsafe { wglMakeCurrent(ptr::null_mut(), ptr::null_mut()) };

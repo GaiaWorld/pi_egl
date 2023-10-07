@@ -52,12 +52,14 @@ pub struct WglInstance {
 }
 
 impl Drop for WglInstance {
+    #[inline]
     fn drop(&mut self) {
         let _ = unsafe { winuser::DestroyWindow(self.window_hwnd) };
     }
 }
 
 impl WglInstance {
+    #[inline]
     pub fn new(power: PowerPreference, is_vsync: bool) -> Result<Self, InstanceError> {
         set_exported_variables(power);
 
@@ -73,7 +75,7 @@ impl WglInstance {
         })
     }
 
-    // 带双缓冲的 Surface
+    #[inline]
     pub fn create_surface<W: HasRawWindowHandle + HasRawDisplayHandle>(
         &self,
         window: &W,
@@ -188,13 +190,7 @@ impl WglInstance {
         Ok(WglContext(gl33_context as u64))
     }
 
-    // 调用了这个之后，gl的函数 才能用；
-    // wasm32 cfg 空实现
-    pub fn make_current(
-        &mut self,
-        surface: Option<&WglSurface>,
-        context: Option<&WglContext>,
-    ) -> Option<&glow::Context> {
+    pub fn make_current(&mut self, surface: Option<&WglSurface>, context: Option<&WglContext>) {
         if let Some(context) = context {
             if let Some(surface) = surface {
                 let ok = unsafe { wglMakeCurrent(surface.0 as HDC, context.0 as HGLRC) };
@@ -209,8 +205,6 @@ impl WglInstance {
                     };
                     self.context.replace(gl);
                 }
-
-                return Some(self.context.as_ref().unwrap());
             } else {
                 let ok = unsafe { wglMakeCurrent(self.window_hdc, context.0 as HGLRC) };
                 assert_ne!(ok, FALSE);
@@ -223,22 +217,19 @@ impl WglInstance {
                     };
                     self.context.replace(gl);
                 }
-
-                return Some(self.context.as_ref().unwrap());
             }
         } else {
             let ok = unsafe { wglMakeCurrent(std::ptr::null_mut(), std::ptr::null_mut()) };
             assert_ne!(ok, FALSE);
         }
-        None
     }
 
+    #[inline]
     pub fn get_glow<'a>(&'a self) -> &glow::Context {
         self.context.as_ref().unwrap()
     }
 
-    // 交换 Surface 中的 双缓冲
-    // wasm32 cfg 空实现
+    #[inline]
     pub fn swap_buffers(&self, surface: &WglSurface) {
         unsafe { SwapBuffers(surface.0 as HDC) };
     }

@@ -146,9 +146,10 @@ impl EglInstance {
         &mut self,
         surface: Option<&EglSurface>,
         context: Option<&EglContext>,
-    ) -> Option<&glow::Context> {
+    ) {
         let egl = &EGL_FUNCTIONS.0;
         let egl_display = self.0;
+
         if let Some(context) = context {
             if let Some(surface) = surface {
                 let ok = unsafe {
@@ -159,7 +160,9 @@ impl EglInstance {
                         context.egl_context,
                     )
                 };
+
                 assert_ne!(ok, egl::FALSE);
+
                 if self.1.is_none() {
                     let context = unsafe {
                         glow::Context::from_loader_function(|symbol_name| {
@@ -168,7 +171,6 @@ impl EglInstance {
                     };
                     let _ = self.1.replace(context);
                 }
-                return Some(self.1.as_ref().unwrap());
             } else {
                 unsafe {
                     let ok = unsafe {
@@ -193,7 +195,11 @@ impl EglInstance {
                 assert_ne!(ok, egl::FALSE);
             }
         }
-        None
+    }
+
+    #[inline]
+    pub fn get_glow<'a>(&'a self) -> &glow::Context {
+        todo!()
     }
 
     // 交换 Surface 中的 双缓冲

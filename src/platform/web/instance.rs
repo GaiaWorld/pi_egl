@@ -8,11 +8,11 @@ use crate::{InstanceError, PowerPreference};
 pub struct WebInstance(Option<glow::Context>);
 
 impl WebInstance {
+    #[inline]
     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
         Ok(WebInstance(None))
     }
 
-    // 带双缓冲的 Surface
     pub fn create_surface<W: HasRawWindowHandle + HasRawDisplayHandle>(
         &self,
         window: &W,
@@ -45,29 +45,29 @@ impl WebInstance {
         )))
     }
 
-    #[allow(non_snake_case)]
+    #[inline]
     pub fn create_context(&self) -> Result<WebContext, InstanceError> {
         return Ok(WebContext);
     }
 
-    // 调用了这个之后，gl的函数 才能用；
-    // wasm32 cfg 空实现
     pub fn make_current<'a>(
         &'a mut self,
         surface: Option<&'a WebSurface>,
         context: Option<&WebContext>,
-    ) -> Option<&glow::Context> {
+    ) {
         if let Some(context) = context {
             if let Some(surface) = surface {
-                return Some(&surface.0);
+                todo!()
+                // return Some(&surface.0);
             }
         }
-        None
     }
 
-    // 交换 Surface 中的 双缓冲
-    // wasm32 cfg 空实现
-    pub fn swap_buffers(&self, surface: &WebSurface) {
-        // unsafe { SwapBuffers(surface.0 as HDC) };
+    #[inline]
+    pub fn get_glow<'a>(&'a self) -> &glow::Context {
+        todo!()
     }
+
+    #[inline]
+    pub fn swap_buffers(&self, surface: &WebSurface) {}
 }
