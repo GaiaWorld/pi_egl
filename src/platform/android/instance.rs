@@ -158,15 +158,6 @@ impl EglInstance {
                 };
 
                 assert_ne!(ok, egl::FALSE);
-
-                if self.1.is_none() {
-                    let context = unsafe {
-                        glow::Context::from_loader_function(|symbol_name| {
-                            get_gl_address(symbol_name)
-                        })
-                    };
-                    let _ = self.1.replace(context);
-                }
             } else {
                 let ok = unsafe {
                     egl.MakeCurrent(
@@ -177,6 +168,13 @@ impl EglInstance {
                     )
                 };
                 assert_ne!(ok, egl::FALSE);
+            }
+
+            if self.1.is_none() {
+                let context = unsafe {
+                    glow::Context::from_loader_function(|symbol_name| get_gl_address(symbol_name))
+                };
+                let _ = self.1.replace(context);
             }
         } else {
             unsafe {

@@ -1,2 +1,3 @@
-#[derive(Debug)]
-pub struct WebContext;
+use super::surface::WebSurface;
+
+pub type WebContext = WebSurface;

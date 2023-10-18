@@ -58,7 +58,27 @@ impl WebInstance {
 
     #[inline]
     pub fn create_context(&self) -> Result<WebContext, InstanceError> {
-        return Ok(WebContext);
+        let value: wasm_bindgen::JsValue = web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .create_element("canvas")
+            .unwrap()
+            .into();
+        let canvas: web_sys::HtmlCanvasElement = value.into();
+        let webgl2_context: web_sys::WebGl2RenderingContext = canvas
+            .get_context("webgl2")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::WebGl2RenderingContext>()
+            .unwrap();
+
+        let id = ID.fetch_add(1, Ordering::Relaxed);
+
+        return Ok(WebContext {
+            context: Arc::new(glow::Context::from_webgl2_context(webgl2_context)),
+            id,
+        });
     }
 
     pub fn make_current<'a>(
@@ -66,13 +86,22 @@ impl WebInstance {
         surface: Option<&'a WebSurface>,
         context: Option<&WebContext>,
     ) {
-        if let Some(surface) = surface {
-            if let Some(bind_surface) = &self.0 {
-                if bind_surface == surface {
-                    return;
+        if let Some(context) = context {
+            if let Some(surface) = surface {
+                if let Some(bind_context) = &self.0 {
+                    if bind_context == surface {
+                        return;
+                    }
                 }
+                self.0.replace(surface.clone());
+            } else {
+                if let Some(bind_context) = &self.0 {
+                    if bind_context == context {
+                        return;
+                    }
+                }
+                self.0.replace(context.clone());
             }
-            self.0.replace(surface.clone());
         }
     }
 

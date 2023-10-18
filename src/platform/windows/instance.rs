@@ -196,27 +196,15 @@ impl WglInstance {
                 let ok = unsafe { wglMakeCurrent(surface.0 as HDC, context.0 as HGLRC) };
                 // set_dc_pixel_format(dc, pixel_format)
                 assert_ne!(ok, FALSE);
-
-                if self.context.is_none() {
-                    let gl = unsafe {
-                        glow::Context::from_loader_function(|symbol_name| {
-                            get_proc_address(symbol_name)
-                        })
-                    };
-                    self.context.replace(gl);
-                }
             } else {
                 let ok = unsafe { wglMakeCurrent(self.window_hdc, context.0 as HGLRC) };
                 assert_ne!(ok, FALSE);
-
-                if self.context.is_none() {
-                    let gl = unsafe {
-                        glow::Context::from_loader_function(|symbol_name| {
-                            get_proc_address(symbol_name)
-                        })
-                    };
-                    self.context.replace(gl);
-                }
+            }
+            if self.context.is_none() {
+                let gl = unsafe {
+                    glow::Context::from_loader_function(|symbol_name| get_proc_address(symbol_name))
+                };
+                self.context.replace(gl);
             }
         } else {
             let ok = unsafe { wglMakeCurrent(std::ptr::null_mut(), std::ptr::null_mut()) };
