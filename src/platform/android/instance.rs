@@ -117,7 +117,7 @@ impl EglInstance {
 
             let egl_context_attributes = [
                 egl::CONTEXT_CLIENT_VERSION as EGLint,
-                2, // Request opengl ES2.0
+                3, // Request opengl ES3.0
                 egl::NONE as EGLint,
             ];
 
