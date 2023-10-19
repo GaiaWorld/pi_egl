@@ -20,3 +20,5 @@
 | 窗口句柄 Trait     | [raw-window-handle](https://github.com/rust-windowing/raw-window-handle)         |
 
 * android 实例 执行 cargo apk run --example hello_android
+
+* 内部crates推送命令 cargo publish --no-verify --manifest-path Cargo.toml --index=http://ser.yinengyun.com:10082/tech/crates-io.git --token 8c3fd4b32020b5041d70142da --allow-dirty
