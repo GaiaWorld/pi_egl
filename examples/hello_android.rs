@@ -1,4 +1,4 @@
-#![cfg(any(target_os = "android"))]
+// #![cfg(any(target_os = "android"))]
 
 use glow::{HasContext, COLOR_BUFFER_BIT};
 use pi_egl::{Instance, PowerPreference, Surface};
@@ -19,15 +19,16 @@ fn main() {
         .build(&event_loop)
         .unwrap();
 
-    let mut instance = Instance::new(PowerPreference::HighPerformance, true).unwrap();
+    let mut instance = Instance::new(PowerPreference::HighPerformance, false).unwrap();
     let context = instance.create_context().unwrap();
 
     let mut gl: Option<&'static glow::Context> = None;
     let mut surface: Option<Surface> = None;
-
+    let mut fps = 0;
+    let mut time = std::time::Instant::now();
     event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Wait;
-        println!("event: {:?}", event);
+        *control_flow = ControlFlow::Poll;
+        // println!("event: {:?}", event);
         match event {
             winit::event::Event::MainEventsCleared => unsafe {
                 // gl.Viewport(0, 0, 1024, 768);
@@ -35,6 +36,7 @@ fn main() {
                     gl.clear_color(1.0, 0.0, 0.0, 1.0);
                     gl.clear(COLOR_BUFFER_BIT);
                 }
+                window.request_redraw();
             },
             winit::event::Event::WindowEvent { event, .. } => match event {
                 winit::event::WindowEvent::CloseRequested => {
@@ -46,10 +48,17 @@ fn main() {
             Event::RedrawRequested(_) => {
                 if let Some(gl) = gl {
                     let err = unsafe { gl.get_error() };
-                    println!("gl error:{}", err);
+                    // println!("gl error:{}", err);
                 }
                 if let Some(surface) = &surface {
-                    instance.swap_buffers(surface)
+                    instance.swap_buffers(surface);
+                    fps += 1;
+                    // println!("time: {:?}",time.elapsed().as_millis() );
+                    if time.elapsed().as_millis() > 1000 {
+                        println!("fps: {}", fps);
+                        fps = 0;
+                        time = std::time::Instant::now();
+                    }
                 }
             }
             Event::Resumed => {

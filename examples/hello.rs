@@ -19,6 +19,8 @@ fn main() {
     let context = instance.create_context().unwrap();
     let surface = instance.create_surface(&window).unwrap();
 
+    instance.make_current(Some(&surface), Some(&context));
+
     let mut r = 0.0;
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -36,7 +38,7 @@ fn main() {
 
             Event::RedrawRequested(_) => {
                 unsafe {
-                    instance.make_current(Some(&surface), Some(&context));
+                    
 
                     let gl = instance.get_glow();
 
@@ -48,15 +50,15 @@ fn main() {
                     gl.clear_color(r, 0.0, 0.0, 1.0);
                     gl.clear(COLOR_BUFFER_BIT);
 
-                    instance.make_current(None, None);
+                    // instance.make_current(None, None);
                 }
 
                 {
-                    instance.make_current(Some(&surface), Some(&context));
+                    // instance.make_current(Some(&surface), Some(&context));
 
                     instance.swap_buffers(&surface);
 
-                    instance.make_current(None, None);
+                    // instance.make_current(None, None);
                 }
             }
             _ => {}

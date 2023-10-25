@@ -171,17 +171,6 @@ impl WglInstance {
         let gl33_context = unsafe {
             wglCreateContextAttribsARB(real_dc, std::ptr::null_mut(), gl33_attribs.as_ptr())
         };
-        if !self.is_vsync {
-            if let Some(func) = WGL_EXTENSION_FUNCTIONS.wglSwapIntervalEXT {
-                let ok = unsafe { func(0) };
-                if ok != 0 {
-                    let err = unsafe { GetLastError() };
-                    println!("vsync closed failed!!! error code: {}", err);
-                } else {
-                    println!("vsync closed successfully!!!")
-                }
-            }
-        }
 
         if gl33_context.is_null() {
             return Err(InstanceError::ContextCreationFailed);
@@ -195,6 +184,17 @@ impl WglInstance {
             if let Some(surface) = surface {
                 let ok = unsafe { wglMakeCurrent(surface.0 as HDC, context.0 as HGLRC) };
                 // set_dc_pixel_format(dc, pixel_format)
+                if !self.is_vsync {
+                    if let Some(func) = WGL_EXTENSION_FUNCTIONS.wglSwapIntervalEXT {
+                        let ok = unsafe { func(0) };
+                        if ok == 0 {
+                            let err = unsafe { GetLastError() };
+                            println!("vsync closed failed!!! error code: {}", err);
+                        } else {
+                            println!("vsync closed successfully!!!");
+                        }
+                    }
+                }
                 assert_ne!(ok, FALSE);
             } else {
                 let ok = unsafe { wglMakeCurrent(self.window_hdc, context.0 as HGLRC) };

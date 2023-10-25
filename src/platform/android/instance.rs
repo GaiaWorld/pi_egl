@@ -17,15 +17,19 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct EglInstance(EGLDisplay, Option<glow::Context>);
+pub struct EglInstance {
+    display: EGLDisplay,
+    context: Option<glow::Context>,
+    is_vsync: bool,
+}
 
 impl Drop for EglInstance {
     fn drop(&mut self) {
         let egl = &EGL_FUNCTIONS.0;
         unsafe {
-            let result = egl.Terminate(self.0);
+            let result = egl.Terminate(self.display);
             assert_ne!(result, egl::FALSE);
-            self.0 = egl::NO_DISPLAY;
+            self.display = egl::NO_DISPLAY;
             #[cfg(feature = "swappy")]
             {
                 SwappyGL_destroy();
@@ -35,7 +39,7 @@ impl Drop for EglInstance {
 }
 
 impl EglInstance {
-    pub fn new(_power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
+    pub fn new(_power: PowerPreference, is_vsync: bool) -> Result<Self, InstanceError> {
         #[cfg(feature = "swappy")]
         {
             let _ = swappy_init();
@@ -52,7 +56,11 @@ impl EglInstance {
             let result = egl.Initialize(egl_display, &mut major_version, &mut minor_version);
             assert_ne!(result, egl::FALSE);
 
-            Ok(EglInstance(egl_display, None))
+            Ok(EglInstance {
+                display: egl_display,
+                context: None,
+                is_vsync,
+            })
         }
     }
 
@@ -62,7 +70,7 @@ impl EglInstance {
         window: &W,
     ) -> Result<EglSurface, InstanceError> {
         let egl = &EGL_FUNCTIONS.0;
-        let egl_display = self.0;
+        let egl_display = self.display;
         let native_window = if let RawWindowHandle::AndroidNdk(handle) = window.raw_window_handle()
         {
             handle.a_native_window
@@ -108,7 +116,7 @@ impl EglInstance {
     #[allow(non_snake_case)]
     pub fn create_context(&self) -> Result<EglContext, InstanceError> {
         let egl = &EGL_FUNCTIONS.0;
-        let egl_display = self.0;
+        let egl_display = self.display;
         // Now we can choose a pixel format the modern way, using wglChoosePixelFormatARB.
         unsafe {
             egl.BindAPI(egl::OPENGL_ES_API);
@@ -144,7 +152,7 @@ impl EglInstance {
     // wasm32 cfg 空实现
     pub fn make_current(&mut self, surface: Option<&EglSurface>, context: Option<&EglContext>) {
         let egl = &EGL_FUNCTIONS.0;
-        let egl_display = self.0;
+        let egl_display = self.display;
 
         if let Some(context) = context {
             if let Some(surface) = surface {
@@ -156,8 +164,16 @@ impl EglInstance {
                         context.egl_context,
                     )
                 };
-
                 assert_ne!(ok, egl::FALSE);
+
+                if !self.is_vsync {
+                    let ok = unsafe { egl.SwapInterval(egl_display, 0) };
+                    if ok != egl::TRUE {
+                        println!("vsync closed failed!!! error code: {}", ok);
+                    } else {
+                        println!("vsync closed successfully!!!");
+                    }
+                }
             } else {
                 let ok = unsafe {
                     egl.MakeCurrent(
@@ -170,11 +186,11 @@ impl EglInstance {
                 assert_ne!(ok, egl::FALSE);
             }
 
-            if self.1.is_none() {
+            if self.context.is_none() {
                 let context = unsafe {
                     glow::Context::from_loader_function(|symbol_name| get_gl_address(symbol_name))
                 };
-                let _ = self.1.replace(context);
+                let _ = self.context.replace(context);
             }
         } else {
             unsafe {
@@ -191,13 +207,13 @@ impl EglInstance {
 
     #[inline]
     pub fn get_glow<'a>(&'a self) -> &glow::Context {
-        self.1.as_ref().unwrap()
+        self.context.as_ref().unwrap()
     }
 
     // 交换 Surface 中的 双缓冲
     // wasm32 cfg 空实现
     pub fn swap_buffers(&self, surface: &EglSurface) {
-        let egl_display = self.0;
+        let egl_display = self.display;
         #[cfg(feature = "swappy")]
         {
             unsafe { SwappyGL_swap(egl_display, surface.egl_surface) };
