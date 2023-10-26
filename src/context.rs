@@ -7,7 +7,7 @@ use crate::platform::android::context::EglContext as ContextInner;
 #[cfg(target_arch = "wasm32")]
 use crate::platform::web::context::WebContext as ContextInner;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Context {
     pub context: ContextInner,
 }

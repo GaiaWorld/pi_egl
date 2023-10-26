@@ -5,7 +5,7 @@ use winapi::{
     um::wingdi::{wglDeleteContext, wglGetCurrentContext, wglMakeCurrent},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct WglContext(pub u64);
 
 impl Drop for WglContext {
