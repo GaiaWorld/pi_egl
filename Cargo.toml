@@ -1,6 +1,6 @@
 [package]
 name = "pi_egl"
-version = "0.1.4"
+version = "0.1.6"
 edition = "2021"
 authors = ["moyy <myy412001799@gmail.com>"]
 description = "Egl wrap for windows / android / webgl2"
@@ -14,6 +14,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 swappy = []
 shared-stdcxx = []
+fps = []
 
 [dependencies]
 pi_share = "0.4"
@@ -48,6 +49,8 @@ gl_generator = "0.14"
 
 [dev-dependencies]
 winit = {registry = "yn", version = "0.27"}
+env_logger = "0.10"
+log4rs = "1.0"
 
 [target.'cfg(target_os = "android")'.dependencies]
 # Coordinate the next winit release with android-ndk-rs: https://github.com/rust-windowing/winit/issues/1995

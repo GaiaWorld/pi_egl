@@ -1,6 +1,11 @@
 use glow::{HasContext, COLOR_BUFFER_BIT};
+use log::LevelFilter;
+use log4rs::{
+    append::console::ConsoleAppender,
+    config::{Appender, Root},
+    encode::{json::JsonEncoder, writer::simple::SimpleWriter},
+};
 use pi_egl::{Instance, PowerPreference};
-
 use winit::{
     dpi::PhysicalSize,
     event::Event,
@@ -9,6 +14,13 @@ use winit::{
 };
 
 fn main() {
+    let stdout = ConsoleAppender::builder().build();
+    let log_config = log4rs::config::Config::builder()
+        .appender(Appender::builder().build("stdout", Box::new(stdout)))
+        .build(Root::builder().appender("stdout").build(LevelFilter::Info))
+        .unwrap();
+    log4rs::init_config(log_config).unwrap();
+
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_inner_size(PhysicalSize::new(1024, 768))
@@ -22,6 +34,9 @@ fn main() {
     instance.make_current(Some(&surface), Some(&context));
 
     let mut r = 0.0;
+
+    let mut fps = 0;
+    let mut time = std::time::Instant::now();
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
 
@@ -38,8 +53,6 @@ fn main() {
 
             Event::RedrawRequested(_) => {
                 unsafe {
-                    
-
                     let gl = instance.get_glow();
 
                     r += 0.01;
@@ -57,7 +70,14 @@ fn main() {
                     // instance.make_current(Some(&surface), Some(&context));
 
                     instance.swap_buffers(&surface);
-
+                    fps += 1;
+                    // println!("time: {:?}",time.elapsed().as_millis() );
+                    if time.elapsed().as_millis() > 1000 {
+                        log::info!("fps: {}", fps);
+                        println!("fps: {}", fps);
+                        fps = 0;
+                        time = std::time::Instant::now();
+                    }
                     // instance.make_current(None, None);
                 }
             }

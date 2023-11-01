@@ -1,6 +1,7 @@
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
+use std::sync::atomic::AtomicU32;
 
 #[cfg(feature = "swappy")]
 use super::swappy::{
@@ -21,6 +22,10 @@ pub struct EglInstance {
     display: EGLDisplay,
     context: Option<glow::Context>,
     is_vsync: bool,
+    #[cfg(feature = "fps")]
+    fps: AtomicU32,
+    #[cfg(feature = "fps")]
+    time: pi_share::ShareCell<std::time::Instant>,
 }
 
 impl Drop for EglInstance {
@@ -60,6 +65,10 @@ impl EglInstance {
                 display: egl_display,
                 context: None,
                 is_vsync,
+                #[cfg(feature = "fps")]
+                fps: AtomicU32::new(0),
+                #[cfg(feature = "fps")]
+                time: pi_share::ShareCell::new(std::time::Instant::now()),
             })
         }
     }
@@ -171,7 +180,7 @@ impl EglInstance {
                     if ok != egl::TRUE {
                         println!("vsync closed failed!!! error code: {}", ok);
                     } else {
-                        println!("vsync closed successfully!!!");
+                        // println!("vsync closed successfully!!!");
                     }
                 }
             } else {
@@ -223,6 +232,18 @@ impl EglInstance {
             let egl = &EGL_FUNCTIONS.0;
             unsafe { egl.SwapBuffers(egl_display, surface.egl_surface) };
         }
+
+        #[cfg(feature = "fps")]
+        {
+            self.fps.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let mut time = self.time.borrow_mut();
+            if time.elapsed().as_millis() > 1000{
+                println!("PI_EGL FPS: {:?}", self.fps);
+                self.fps.store(0, std::sync::atomic::Ordering::Relaxed);
+                *time = std::time::Instant::now();
+            }
+        }
+        
     }
 }
 

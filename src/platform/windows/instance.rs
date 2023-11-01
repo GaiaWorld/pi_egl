@@ -49,6 +49,11 @@ pub struct WglInstance {
     window_hdc: HDC,
 
     is_vsync: bool,
+
+    #[cfg(feature = "fps")]
+    fps: AtomicU32,
+    #[cfg(feature = "fps")]
+    time: pi_share::ShareCell<std::time::Instant>,
 }
 
 impl Drop for WglInstance {
@@ -72,6 +77,10 @@ impl WglInstance {
             window_hdc,
 
             is_vsync,
+            #[cfg(feature = "fps")]
+            fps: AtomicU32::new(0),
+            #[cfg(feature = "fps")]
+            time: pi_share::ShareCell::new(std::time::Instant::now()),
         })
     }
 
@@ -220,5 +229,16 @@ impl WglInstance {
     #[inline]
     pub fn swap_buffers(&self, surface: &WglSurface) {
         unsafe { SwapBuffers(surface.0 as HDC) };
+
+        #[cfg(feature = "fps")]
+        {
+            self.fps.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let mut time = self.time.borrow_mut();
+            if time.elapsed().as_millis() > 1000 {
+                println!("PI_EGL FPS: {:?}", self.fps);
+                self.fps.store(0, std::sync::atomic::Ordering::Relaxed);
+                *time = std::time::Instant::now();
+            }
+        }
     }
 }

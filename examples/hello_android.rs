@@ -1,8 +1,13 @@
 // #![cfg(any(target_os = "android"))]
 
 use glow::{HasContext, COLOR_BUFFER_BIT};
+use log::LevelFilter;
+use log4rs::{
+    append::console::ConsoleAppender,
+    config::{Appender, Root},
+    encode::{json::JsonEncoder, writer::simple::SimpleWriter},
+};
 use pi_egl::{Instance, PowerPreference, Surface};
-
 use winit::{
     dpi::PhysicalSize,
     event::Event,
@@ -12,6 +17,15 @@ use winit::{
 
 #[cfg_attr(target_os = "android", ndk_glue::main(backtrace = "on"))]
 fn main() {
+    
+    let stdout = ConsoleAppender::builder().build();
+    let log_config = log4rs::config::Config::builder()
+        .appender(Appender::builder().build("stdout", Box::new(stdout)))
+        .build(Root::builder().appender("stdout").build(LevelFilter::Info))
+        .unwrap();
+    log4rs::init_config(log_config).unwrap();
+
+
     std::env::set_var("RUST_BACKTRACE", "full");
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
@@ -55,7 +69,7 @@ fn main() {
                     fps += 1;
                     // println!("time: {:?}",time.elapsed().as_millis() );
                     if time.elapsed().as_millis() > 1000 {
-                        println!("fps: {}", fps);
+                        log::info!("fps: {}", fps);
                         fps = 0;
                         time = std::time::Instant::now();
                     }
