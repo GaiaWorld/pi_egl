@@ -1,6 +1,6 @@
 use std::os::raw::c_int;
 
-use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawWindowHandle};
 use winapi::{
     shared::{
         minwindef::{FALSE, UINT},
@@ -85,12 +85,16 @@ impl WglInstance {
     }
 
     #[inline]
-    pub fn create_surface<W: HasRawWindowHandle + HasRawDisplayHandle>(
+    pub fn create_surface<W: HasWindowHandle + HasDisplayHandle>(
         &self,
         window: &W,
     ) -> Result<WglSurface, InstanceError> {
-        let real_dc = if let RawWindowHandle::Win32(handle) = window.raw_window_handle() {
-            unsafe { winuser::GetDC(handle.hwnd as HWND) }
+        let real_dc = if let Ok(h) = window.window_handle() {
+			if let RawWindowHandle::Win32(handle) = h.as_raw() {
+				unsafe { winuser::GetDC((handle.hwnd.get()) as HWND) }
+			} else {
+				return Err(InstanceError::IncompatibleWindowHandle);
+			}
         } else {
             return Err(InstanceError::IncompatibleWindowHandle);
         };

@@ -1,5 +1,5 @@
 use pi_share::Share;
-use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
 use super::{Context, PowerPreference, Surface};
 
@@ -38,7 +38,7 @@ impl Instance {
 
     // 带双缓冲的 Surface
     #[inline]
-    pub fn create_surface<W: HasRawWindowHandle + HasRawDisplayHandle>(
+    pub fn create_surface<W: HasWindowHandle + HasDisplayHandle>(
         &self,
         window: &W,
     ) -> Result<Surface, InstanceError> {
