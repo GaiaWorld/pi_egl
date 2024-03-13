@@ -26,7 +26,7 @@ impl WebInstance {
         &self,
         window: &W,
     ) -> Result<WebSurface, InstanceError> {
-        let canvas_attribute = if let RawWindowHandle::Web(handle) = window.raw_window_handle() {
+        let canvas_attribute = if let Ok(RawWindowHandle::Web(handle)) = window.raw_window_handle() {
             handle.id
         } else {
             return Err(InstanceError::IncompatibleWindowHandle);
