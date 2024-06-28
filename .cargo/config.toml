@@ -1,0 +1,2 @@
+[net]
+git-fetch-with-cli = true   # 使用 `git` 可执行文件进行 git 操作

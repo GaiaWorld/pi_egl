@@ -1,4 +1,7 @@
+use std::ptr::NonNull;
+
 use glow::{HasContext, COLOR_BUFFER_BIT};
+use libc::c_void;
 use log::LevelFilter;
 use log4rs::{
     append::console::ConsoleAppender,
@@ -14,6 +17,9 @@ use winit::{
 };
 
 fn main() {
+    let r: *mut c_void  = std::ptr::null_mut();
+    let r = NonNull::new(r).unwrap();
+    let r = r.as_ptr()
     let stdout = ConsoleAppender::builder().build();
     let log_config = log4rs::config::Config::builder()
         .appender(Appender::builder().build("stdout", Box::new(stdout)))

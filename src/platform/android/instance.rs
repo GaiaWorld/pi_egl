@@ -80,7 +80,7 @@ impl EglInstance {
     ) -> Result<EglSurface, InstanceError> {
         let egl = &EGL_FUNCTIONS.0;
         let egl_display = self.display;
-        let native_window = if let RawWindowHandle::AndroidNdk(handle) = window.raw_window_handle()
+        let native_window = if let Ok(RawWindowHandle::AndroidNdk(handle)) = window.raw_window_handle()
         {
             handle.a_native_window
         } else {
@@ -100,7 +100,7 @@ impl EglInstance {
             let egl_surface = egl.CreateWindowSurface(
                 egl_display,
                 egl_config,
-                native_window,
+                native_window.as_ptr(),
                 attributes.as_ptr(),
             );
 
