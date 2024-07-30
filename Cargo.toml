@@ -1,6 +1,6 @@
 [package]
 name = "pi_egl"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2021"
 authors = ["moyy <myy412001799@gmail.com>"]
 description = "Egl wrap for windows / android / webgl2"
@@ -25,7 +25,7 @@ lazy_static = "1"
 glow = "0.13"
 libc = "0.2"
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
+# [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3.61", features = [
     "Document",

@@ -3,11 +3,11 @@ use std::sync::{
     Arc,
 };
 
-use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
-use wasm_bindgen::JsCast;
-
-use super::{context::WebContext, surface::WebSurface};
+use super::{context::WebContext, getCanvas, surface::WebSurface};
 use crate::{InstanceError, PowerPreference};
+use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::js_sys;
 
 lazy_static! {
     pub static ref ID: AtomicU64 = AtomicU64::from(0);
@@ -19,6 +19,7 @@ pub struct WebInstance(Option<WebSurface>);
 impl WebInstance {
     #[inline]
     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
+        log::error!("new");
         Ok(WebInstance(None))
     }
 
@@ -26,32 +27,59 @@ impl WebInstance {
         &self,
         window: &W,
     ) -> Result<WebSurface, InstanceError> {
-        let canvas_attribute = if let Ok(RawWindowHandle::Web(handle)) = window.raw_window_handle() {
+        let canvas_attribute = if let Ok(RawWindowHandle::Web(handle)) = window.raw_window_handle()
+        {
             handle.id
         } else {
             return Err(InstanceError::IncompatibleWindowHandle);
         };
+        let window = web_sys::window().unwrap();
+        let mut canvas = None;
+        if let Ok(user) = window.navigator().user_agent() {
+            if user.contains("wechatdevtools") {
+                log::error!("egl minigame!!!!!");
+                canvas = Some(
+                    js_sys::Reflect::get(&window, &"canvas".to_string().into())
+                        .unwrap_or(JsValue::null()),
+                );
+            }
+        }
 
-        let canvas_node: wasm_bindgen::JsValue = web_sys::window()
-            .and_then(|win| win.document())
-            .and_then(|doc| {
-                doc.query_selector_all(&format!("[data-raw-handle=\"{canvas_attribute}\"]"))
-                    .ok()
-            })
-            .and_then(|nodes| nodes.get(0))
-            .expect("expected to find single canvas")
-            .into();
-        let canvas: web_sys::HtmlCanvasElement = canvas_node.into();
-        let webgl2_context: web_sys::WebGl2RenderingContext = canvas
-            .get_context("webgl2")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<web_sys::WebGl2RenderingContext>()
-            .unwrap();
+        if canvas.is_none() {
+            canvas = Some(
+                window
+                    .document()
+                    .and_then(|doc| {
+                        doc.query_selector_all(&format!("[data-raw-handle=\"{canvas_attribute}\"]"))
+                            .ok()
+                    })
+                    .and_then(|nodes| nodes.get(0))
+                    .expect("expected to find single canvas").into(),
+            );
+        }
+
+        let canvas = canvas.take().unwrap();
+
+        if canvas.is_null() || canvas.is_undefined() {
+            log::error!("create_surface 000");
+        }
+
+        log::error!("create_surface 1111");
+        let canvas: web_sys::HtmlCanvasElement = canvas.into();
+        log::error!("create_surface 222");
+
+        let webgl2_context: wasm_bindgen::JsValue = match canvas.get_context("webgl2") {
+            Ok(v) => match v {
+                Some(v) => v.into(),
+                None => wasm_bindgen::throw_str("webgl2 is none!!!"),
+            },
+            Err(err) => wasm_bindgen::throw_str(&format!("get webgl2 failed!!!{:?}", err)),
+        };
+
         let id = ID.fetch_add(1, Ordering::Relaxed);
 
         Ok(WebSurface {
-            context: Arc::new(glow::Context::from_webgl2_context(webgl2_context)),
+            context: Arc::new(glow::Context::from_webgl2_context(webgl2_context.into())),
             id,
         })
     }
@@ -65,18 +93,16 @@ impl WebInstance {
             .create_element("canvas")
             .unwrap()
             .into();
+
         let canvas: web_sys::HtmlCanvasElement = value.into();
-        let webgl2_context: web_sys::WebGl2RenderingContext = canvas
-            .get_context("webgl2")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<web_sys::WebGl2RenderingContext>()
-            .unwrap();
+
+        let webgl2_context: wasm_bindgen::JsValue =
+            canvas.get_context("webgl2").unwrap().unwrap().into();
 
         let id = ID.fetch_add(1, Ordering::Relaxed);
 
         return Ok(WebContext {
-            context: Arc::new(glow::Context::from_webgl2_context(webgl2_context)),
+            context: Arc::new(glow::Context::from_webgl2_context(webgl2_context.into())),
             id,
         });
     }

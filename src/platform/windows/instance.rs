@@ -66,6 +66,7 @@ impl Drop for WglInstance {
 impl WglInstance {
     #[inline]
     pub fn new(power: PowerPreference, is_vsync: bool) -> Result<Self, InstanceError> {
+        log::error!("new");
         set_exported_variables(power);
 
         let window_hwnd = HiddenWindow::create();
@@ -89,6 +90,7 @@ impl WglInstance {
         &self,
         window: &W,
     ) -> Result<WglSurface, InstanceError> {
+        log::error!("create_surface");
         let real_dc = if let Ok(h) = window.window_handle() {
 			if let RawWindowHandle::Win32(handle) = h.as_raw() {
 				unsafe { winuser::GetDC((handle.hwnd.get()) as HWND) }
@@ -108,6 +110,7 @@ impl WglInstance {
 
     #[allow(non_snake_case)]
     pub fn create_context(&self) -> Result<WglContext, InstanceError> {
+        log::error!("create_context");
         let pixel_format_attribs = [
             WGL_DRAW_TO_WINDOW_ARB as c_int,
             1 as c_int,
