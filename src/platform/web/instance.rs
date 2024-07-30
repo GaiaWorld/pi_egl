@@ -3,7 +3,7 @@ use std::sync::{
     Arc,
 };
 
-use super::{context::WebContext, getCanvas, surface::WebSurface};
+use super::{context::WebContext, surface::WebSurface};
 use crate::{InstanceError, PowerPreference};
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
 use wasm_bindgen::{JsCast, JsValue};
@@ -19,7 +19,6 @@ pub struct WebInstance(Option<WebSurface>);
 impl WebInstance {
     #[inline]
     pub fn new(power: PowerPreference, _is_vsync: bool) -> Result<Self, InstanceError> {
-        log::error!("new");
         Ok(WebInstance(None))
     }
 
