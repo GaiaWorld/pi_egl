@@ -34,8 +34,10 @@ impl WebInstance {
         };
         let window = web_sys::window().unwrap();
         let mut canvas = None;
-        if let Ok(user) = window.navigator().user_agent() {
-            if user.contains("wechatdevtools") {
+        let user = window.navigator().user_agent();
+        log::error!("navigator user : {:?}", user);
+        if let Ok(user) = user {
+            if user.contains("wechatdevtools") || user.contains("PI_WX_GAME") {
                 log::error!("egl minigame!!!!!");
                 canvas = Some(
                     js_sys::Reflect::get(&window, &"canvas".to_string().into())
