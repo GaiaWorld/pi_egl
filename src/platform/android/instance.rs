@@ -1,7 +1,7 @@
-use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
+#[allow(deprecated)]
+use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle, XlibWindowHandle};
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
-use std::sync::atomic::AtomicU32;
 
 #[cfg(feature = "swappy")]
 use super::swappy::{
@@ -74,15 +74,18 @@ impl EglInstance {
     }
 
     // 带双缓冲的 Surface
+    #[allow(deprecated)]
     pub fn create_surface<W: HasRawWindowHandle + HasRawDisplayHandle>(
         &self,
         window: &W,
     ) -> Result<EglSurface, InstanceError> {
         let egl = &EGL_FUNCTIONS.0;
         let egl_display = self.display;
-        let native_window = if let Ok(RawWindowHandle::AndroidNdk(handle)) = window.raw_window_handle()
-        {
-            handle.a_native_window
+        let handle = window.raw_window_handle();
+        let native_window = if let Ok(RawWindowHandle::AndroidNdk(handle)) = handle {
+            handle.a_native_window.as_ptr()
+        } else if let Ok(RawWindowHandle::Xlib(XlibWindowHandle{window, .. })) = handle {
+            window as *mut c_void
         } else {
             return Err(InstanceError::IncompatibleWindowHandle);
         };
@@ -100,7 +103,7 @@ impl EglInstance {
             let egl_surface = egl.CreateWindowSurface(
                 egl_display,
                 egl_config,
-                native_window.as_ptr(),
+                native_window,
                 attributes.as_ptr(),
             );
 

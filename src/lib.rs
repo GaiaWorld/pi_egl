@@ -8,7 +8,6 @@ mod context;
 pub mod macros;
 
 pub mod platform;
-pub use gl::*;
 pub use instance::*;
 pub use surface::*;
 pub use context::*;

@@ -9,7 +9,7 @@ fn main() {
     let dest = PathBuf::from(&env::var("OUT_DIR").unwrap());
 
    
-    if target_os == "android" {
+    if target_os == "android" || target_os == "linux" {
         #[cfg(feature = "swappy")]
         {
             if cfg!(feature = "shared-stdcxx"){

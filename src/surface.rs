@@ -3,7 +3,7 @@ use pi_share::Share;
 #[cfg(target_os = "windows")]
 use crate::platform::windows::surface::WglSurface as SurfaceInner;
 
-#[cfg(target_os = "android")]
+#[cfg(target_os = "linux")]
 use crate::platform::android::surface::EglSurface as SurfaceInner;
 
 #[cfg(target_arch = "wasm32")]

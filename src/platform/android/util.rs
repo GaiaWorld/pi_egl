@@ -33,7 +33,7 @@ fn get_egl_address(symbol_name: &str) -> *const c_void {
         let symbol_name: CString = CString::new(symbol_name).unwrap();
         let symbol_ptr = symbol_name.as_ptr() as *const u8 as *const c_char;
         let v = dlsym(EGL_LIBRARY.0, symbol_ptr) as *const c_void;
-        // println!("egl symbol_name {:?} ptr is {:?}!!", symbol_name, v);
+        // println!("egl {:?} symbol_name {:?} ptr is {:?}!!", EGL_LIBRARY.0, symbol_name, v);
         v
     }
 }

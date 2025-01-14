@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use pi_share::Share;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
@@ -13,6 +11,9 @@ use crate::platform::windows::instance::WglInstance as InstanceInner;
 use crate::platform::web::instance::WebInstance as InstanceInner;
 
 #[cfg(target_os = "android")]
+use crate::platform::android::instance::EglInstance as InstanceInner;
+
+#[cfg(target_os = "linux")]
 use crate::platform::android::instance::EglInstance as InstanceInner;
 
 crate::init_env!();
