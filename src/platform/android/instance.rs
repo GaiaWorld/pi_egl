@@ -1,5 +1,6 @@
 #[allow(deprecated)]
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle, XlibWindowHandle};
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 
@@ -16,7 +17,10 @@ use crate::{
     platform::android::{egl::types::EGLDisplay, util::egl_config_from_display},
     InstanceError, PowerPreference,
 };
+lazy_static! {
+    static ref SURFACE_MAP: std::sync::RwLock<HashMap<u64, u64>> = std::sync::RwLock::new(HashMap::new());
 
+}
 #[derive(Debug)]
 pub struct EglInstance {
     display: EGLDisplay,
@@ -100,22 +104,27 @@ impl EglInstance {
             let egl_config = egl_config_from_display(egl_display);
 
             let attributes = [egl::NONE as EGLint];
-            let egl_surface = egl.CreateWindowSurface(
-                egl_display,
-                egl_config,
-                native_window,
-                attributes.as_ptr(),
-            );
-
-            assert_ne!(egl_surface, egl::NO_SURFACE);
-
+            let s = { SURFACE_MAP.read().unwrap().get(&(native_window.as_ptr() as u64)).map(|v|*v) };
+            let egl_surface = if let Some(r) = s {
+                r as *const c_void
+            } else {
+                 let r = egl.CreateWindowSurface(
+                    egl_display,
+                    egl_config,
+                    native_window,
+                    attributes.as_ptr(),
+                );
+                SURFACE_MAP.write().unwrap().insert(native_window.as_ptr() as u64, r as u64);
+                r
+            };
+            
+            assert_ne!(egl_surface, egl::NO_SURFACE); 
             let mut width = 0;
             let mut height = 0;
             egl.QuerySurface(egl_display, egl_surface, egl::WIDTH as EGLint, &mut width);
             egl.QuerySurface(egl_display, egl_surface, egl::HEIGHT as EGLint, &mut height);
             assert_ne!(width, 0);
             assert_ne!(height, 0);
-
             Ok(EglSurface {
                 width,
                 height,
