@@ -18,8 +18,7 @@ use crate::{
     InstanceError, PowerPreference,
 };
 lazy_static! {
-    static ref SURFACE_MAP: std::sync::RwLock<HashMap<u64, u64>> = std::sync::RwLock::new(HashMap::new());
-
+    static ref SURFACE_PTR: std::sync::RwLock<u64> = std::sync::RwLock::new(0);
 }
 #[derive(Debug)]
 pub struct EglInstance {
@@ -104,19 +103,21 @@ impl EglInstance {
             let egl_config = egl_config_from_display(egl_display);
 
             let attributes = [egl::NONE as EGLint];
-            let s = { SURFACE_MAP.read().unwrap().get(&(native_window.as_ptr() as u64)).map(|v|*v) };
-            let egl_surface = if let Some(r) = s {
-                r as *const c_void
+            let mut egl_surface = egl.CreateWindowSurface(
+                egl_display,
+                egl_config,
+                native_window,
+                attributes.as_ptr(),
+            );
+            println!("native_window: {:?}; egl_surface: {:?}", native_window, egl_surface);
+            if egl_surface == egl::NO_SURFACE {
+                let ptr = *SURFACE_PTR.read().unwrap();
+                if ptr != 0 {
+                    egl_surface =  ptr as *mut c_void;
+                }
             } else {
-                 let r = egl.CreateWindowSurface(
-                    egl_display,
-                    egl_config,
-                    native_window,
-                    attributes.as_ptr(),
-                );
-                SURFACE_MAP.write().unwrap().insert(native_window.as_ptr() as u64, r as u64);
-                r
-            };
+                *SURFACE_PTR.write().unwrap() = egl_surface as u64;
+            }
             
             assert_ne!(egl_surface, egl::NO_SURFACE); 
             let mut width = 0;
