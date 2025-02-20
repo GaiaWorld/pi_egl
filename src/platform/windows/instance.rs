@@ -43,17 +43,17 @@ const WGL_CONTEXT_CORE_PROFILE_BIT_ARB: GLenum = 0x00000001;
 
 #[derive(Debug)]
 pub struct WglInstance {
-    context: Option<glow::Context>,
+    context: Option<glow::Context>, // 可选的OpenGL上下文（通过glow库管理）
 
-    window_hwnd: HWND,
-    window_hdc: HDC,
+    window_hwnd: HWND, // 隐藏窗口的句柄
+    window_hdc: HDC, // 隐藏窗口的设备上下文句柄
 
-    is_vsync: bool,
+    is_vsync: bool, // 是否启用垂直同步
 
     #[cfg(feature = "fps")]
-    fps: AtomicU32,
+    fps: AtomicU32, // (条件编译): 帧率计数器
     #[cfg(feature = "fps")]
-    time: pi_share::ShareCell<std::time::Instant>,
+    time: pi_share::ShareCell<std::time::Instant>, // (条件编译): 用于计算FPS的时间戳
 }
 
 impl Drop for WglInstance {
@@ -64,6 +64,18 @@ impl Drop for WglInstance {
 }
 
 impl WglInstance {
+    /// 创建一个新的WGL实例
+    ///
+    /// # 参数
+    /// - `power`: 显卡性能偏好（如高性能或节能）
+    /// - `is_vsync`: 是否启用垂直同步
+    ///
+    /// # 返回值
+    /// - `Ok(Self)`: 成功创建的实例
+    /// - `Err(InstanceError)`: 创建失败的错误类型
+    ///
+    /// # 注意
+    /// 内部会创建一个隐藏窗口用于初始化OpenGL环境
     #[inline]
     pub fn new(power: PowerPreference, is_vsync: bool) -> Result<Self, InstanceError> {
         log::error!("new");
@@ -85,6 +97,17 @@ impl WglInstance {
         })
     }
 
+    /// 为指定窗口创建渲染表面
+    ///
+    /// # 参数
+    /// - `window`: 实现了`HasWindowHandle`和`HasDisplayHandle` trait的窗口对象
+    ///
+    /// # 返回值
+    /// - `Ok(WglSurface)`: 成功创建的渲染表面
+    /// - `Err(InstanceError::IncompatibleWindowHandle)`: 窗口句柄类型不兼容
+    ///
+    /// # 安全要求
+    /// 传入的窗口必须持有有效的Win32窗口句柄
     #[inline]
     pub fn create_surface<W: HasWindowHandle + HasDisplayHandle>(
         &self,
@@ -108,6 +131,15 @@ impl WglInstance {
         Ok(WglSurface(real_dc as u64))
     }
 
+    /// 创建OpenGL 3.3核心配置文件上下文
+    ///
+    /// # 返回值
+    /// - `Ok(WglContext)`: 成功创建的OpenGL上下文
+    /// - `Err(InstanceError::RequiredExtensionUnavailable)`: 缺少必要WGL扩展
+    /// - `Err(InstanceError::ContextCreationFailed)`: 上下文创建失败
+    ///
+    /// # 像素格式属性
+    /// 使用32位颜色、24位深度缓冲、8位模板缓冲、8位Alpha通道
     #[allow(non_snake_case)]
     pub fn create_context(&self) -> Result<WglContext, InstanceError> {
         log::error!("create_context");
@@ -195,6 +227,17 @@ impl WglInstance {
         Ok(WglContext(gl33_context as u64))
     }
 
+    /// 设置当前渲染上下文和表面
+    ///
+    /// # 参数
+    /// - `surface`: 可选的要绑定的渲染表面
+    /// - `context`: 可选的要激活的OpenGL上下文
+    ///
+    /// # Panics
+    /// - 如果绑定操作失败会触发断言
+    ///
+    /// # 注意
+    /// 当首次绑定上下文时会初始化glow上下文
     pub fn make_current(&mut self, surface: Option<&WglSurface>, context: Option<&WglContext>) {
         if let Some(context) = context {
             if let Some(surface) = surface {
@@ -228,11 +271,22 @@ impl WglInstance {
         }
     }
 
+    /// 获取当前glow OpenGL上下文
+    ///
+    /// # Panics
+    /// 如果上下文尚未初始化（未调用过make_current）
     #[inline]
     pub fn get_glow<'a>(&'a self) -> &glow::Context {
         self.context.as_ref().unwrap()
     }
 
+    /// 交换前后缓冲区并处理垂直同步
+    ///
+    /// # 参数
+    /// - `surface`: 要交换缓冲区的渲染表面
+    ///
+    /// # 功能
+    /// - 当启用`fps`特性时，会自动计算并打印帧率
     #[inline]
     pub fn swap_buffers(&self, surface: &WglSurface) {
         unsafe { SwapBuffers(surface.0 as HDC) };
