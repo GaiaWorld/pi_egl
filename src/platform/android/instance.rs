@@ -42,16 +42,16 @@ pub struct EglInstance {
 impl Drop for EglInstance {
     /// 实现 `Drop` 特征，负责释放资源。
     fn drop(&mut self) {
-        /// 获取 EGL 函数指针。
+        // 获取 EGL 函数指针。
         let egl = &EGL_FUNCTIONS.0;
         unsafe {
-            /// 终止 EGL 显示连接。
+            // 终止 EGL 显示连接。
             let result = egl.Terminate(self.display);
-            /// 确保终止操作成功。
+            // 确保终止操作成功。
             assert_ne!(result, egl::FALSE);
-            /// 重置显示为无效值。
+            // 重置显示为无效值。
             self.display = egl::NO_DISPLAY;
-            /// 如果启用了 `swappy` 特性，销毁 SwappyGL。
+            // 如果启用了 `swappy` 特性，销毁 SwappyGL。
             #[cfg(feature = "swappy")]
             {
                 SwappyGL_destroy();
