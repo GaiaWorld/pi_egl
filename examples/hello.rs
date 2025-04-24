@@ -6,7 +6,6 @@ use log::LevelFilter;
 use log4rs::{
     append::console::ConsoleAppender,
     config::{Appender, Root},
-    encode::{json::JsonEncoder, writer::simple::SimpleWriter},
 };
 use pi_egl::{Instance, PowerPreference};
 use winit::{
@@ -17,9 +16,9 @@ use winit::{
 };
 
 fn main() {
-    let r: *mut c_void  = std::ptr::null_mut();
-    let r = NonNull::new(r).unwrap();
-    let r = r.as_ptr()
+    // let r: *mut c_void  = std::ptr::null_mut();
+    // let r = NonNull::new(r).unwrap();
+    // let r = r.as_ptr()
     let stdout = ConsoleAppender::builder().build();
     let log_config = log4rs::config::Config::builder()
         .appender(Appender::builder().build("stdout", Box::new(stdout)))

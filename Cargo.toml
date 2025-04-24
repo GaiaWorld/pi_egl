@@ -1,6 +1,6 @@
 [package]
 name = "pi_egl"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["moyy <myy412001799@gmail.com>"]
 description = "Egl wrap for windows / android / webgl2"

@@ -5,6 +5,7 @@ use std::sync::{
 
 use super::{context::WebContext, surface::WebSurface};
 use crate::{InstanceError, PowerPreference};
+use glow::HasContext;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle, RawWindowHandle};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::js_sys;
@@ -52,16 +53,16 @@ impl WebInstance {
         let mut canvas = None;
         let user = window.navigator().user_agent();
         log::error!("navigator user : {:?}", user);
-        if let Ok(user) = user {
-            // 检测是否为微信小游戏环境。
-            if user.contains("wechatdevtools") || user.contains("PI_WX_GAME") {
-                log::error!("微信小游戏环境，使用特殊的canvas处理！！！");
+        // if let Ok(user) = user {
+        //     // 检测是否为微信小游戏环境。
+        //     if user.contains("wechatdevtools") || user.contains("PI_WX_GAME") || user.contains("PI_QQ_GAME") {
+                // log::error!("微信小游戏环境，使用特殊的canvas处理！！！");
                 canvas = Some(
                     js_sys::Reflect::get(&window, &"canvas".to_string().into())
                         .unwrap_or(JsValue::null()),
                 );
-            }
-        }
+        //     }
+        // }
 
         // 如果未找到canvas元素，则尝试通过查询获取。
         if canvas.is_none() {
@@ -173,5 +174,9 @@ impl WebInstance {
 
     /// 交换表面的缓冲区。
     #[inline]
-    pub fn swap_buffers(&self, surface: &WebSurface) {}
+    pub fn swap_buffers(&self, surface: &WebSurface) {
+        // let c = self.0.as_ref().unwrap().context.as_ref();
+        // let e = unsafe { c.get_error() };
+        // log::error!("============= swap_buffers: {}", e);
+    }
 }

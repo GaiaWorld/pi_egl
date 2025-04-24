@@ -1,3 +1,6 @@
+use std::sync::RwLock;
+
+use glow::HasContext;
 use pi_share::Share;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
@@ -7,6 +10,10 @@ use super::{Context, PowerPreference, Surface};
 #[cfg(target_os = "windows")]
 use crate::platform::windows::instance::WglInstance as InstanceInner;
 
+
+#[cfg(target_os = "windows")]
+use crate::platform::windows::util::get_proc_address as get_gl_address;
+
 #[cfg(target_arch = "wasm32")]
 use crate::platform::web::instance::WebInstance as InstanceInner;
 
@@ -15,6 +22,11 @@ use crate::platform::android::instance::EglInstance as InstanceInner;
 
 
 crate::init_env!();
+
+lazy_static!{
+     static ref INSTANCE: RwLock<Option<Instance>> = RwLock::new(None);
+     static ref CONTEXT: RwLock<Option<Context>> = RwLock::new(None);
+}
 
 #[derive(Debug)]
 pub struct Instance {
@@ -91,6 +103,11 @@ impl Instance {
     // wasm32 cfg 空实现
     #[inline]
     pub fn swap_buffers(&self, surface: &Surface) {
+        let gl = self.instance.get_glow();
+        let e = unsafe { gl.get_error() };
+        if e != 0 {
+            log::error!("opengl error: {}!!", e);
+        }
         self.instance.swap_buffers(&surface.surface)
     }
 }
