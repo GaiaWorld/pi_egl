@@ -103,11 +103,11 @@ impl Instance {
     // wasm32 cfg 空实现
     #[inline]
     pub fn swap_buffers(&self, surface: &Surface) {
-        let gl = self.instance.get_glow();
-        let e = unsafe { gl.get_error() };
-        if e != 0 {
-            log::error!("opengl error: {}!!", e);
-        }
+        // let gl = self.instance.get_glow();
+        // let e = unsafe { gl.get_error() };
+        // if e != 0 {
+        //     log::error!("opengl error: {}!!", e);
+        // }
         self.instance.swap_buffers(&surface.surface)
     }
 }

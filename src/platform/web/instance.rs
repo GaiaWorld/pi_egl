@@ -52,7 +52,7 @@ impl WebInstance {
         // 尝试获取或创建canvas元素。
         let mut canvas = None;
         let user = window.navigator().user_agent();
-        log::error!("navigator user : {:?}", user);
+        log::debug!("navigator user : {:?}", user);
         // if let Ok(user) = user {
         //     // 检测是否为微信小游戏环境。
         //     if user.contains("wechatdevtools") || user.contains("PI_WX_GAME") || user.contains("PI_QQ_GAME") {
